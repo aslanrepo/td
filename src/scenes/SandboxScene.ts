@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { TelegramService } from '@/services/TelegramService';
 import { TelegramThemeParams } from '@/types';
+import { GameWorld } from '../ecs';
+import { Position, Renderable } from '../ecs';
+import { addComponent } from 'bitecs';
 
 /**
  * Sandbox Scene - Development and testing environment
@@ -10,6 +13,7 @@ import { TelegramThemeParams } from '@/types';
 export class SandboxScene extends Phaser.Scene {
     private telegramService?: TelegramService;
     private themeParams: TelegramThemeParams;
+    private ecsWorld!: GameWorld;
 
     constructor() {
         super({ key: 'SandboxScene' });
@@ -32,18 +36,24 @@ export class SandboxScene extends Phaser.Scene {
         };
     }
 
-    override update(time: number, delta: number): void {
-
+    override update(_time: number, delta: number): void {
+        this.ecsWorld.execute(delta);
     }
 
     /**
      * Create sandbox scene elements
      */
     public create(): void {
+        // Initialize ECS world
+        this.ecsWorld = new GameWorld(this);
+
         // Фон: простая зеленая лужайка (прямоугольник)
         const bg = this.add.graphics();
         bg.fillStyle(0x228B22); // Зеленый
         bg.fillRect(0, 0, this.scale.width, this.scale.height);
+
+        // Spawn test enemy
+        this.spawnEnemy(1);
 
         this.createBackButton(this.scale.width, this.scale.height);
     }
@@ -173,6 +183,26 @@ export class SandboxScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
+    }
+
+    /**
+     * Spawn enemy entity with ECS components
+     */
+    private spawnEnemy(lvl: number) {
+        const eid = this.ecsWorld.create();
+
+        // Add components to entity
+        addComponent(this.ecsWorld.world, Position, eid);
+        addComponent(this.ecsWorld.world, Renderable, eid);
+
+        // Set component values
+        Position.x[eid] = 1;  // Start pos
+        Position.y[eid] = 5;
+        Renderable.type[eid] = 0;  // Enemy
+        Renderable.color[eid] = lvl === 1 ? 0xff0000 : 0x0000ff; // Red/blue
+        Renderable.size[eid] = 2;
+
+        console.log(`Spawned enemy ${eid}`);
     }
 
     /**
