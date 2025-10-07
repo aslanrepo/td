@@ -64,7 +64,7 @@ export class MenuScene extends Phaser.Scene {
         const titleText = this.add.text(width / 2, height / 3, 'TOWER DEFENSE', {
             fontSize: '48px',
             fontFamily: 'Arial, sans-serif',
-            color: this.themeParams.text_color,
+            color: this.themeParams.text_color ?? '#ffffff',
             fontStyle: 'bold'
         });
         
@@ -75,7 +75,7 @@ export class MenuScene extends Phaser.Scene {
         const subtitleText = this.add.text(width / 2, height / 3 + 60, 'Defend Your Base!', {
             fontSize: '24px',
             fontFamily: 'Arial, sans-serif',
-            color: this.themeParams.text_color,
+            color: this.themeParams.text_color ?? '#ffffff',
             fontStyle: 'italic'
         });
         
@@ -108,10 +108,10 @@ export class MenuScene extends Phaser.Scene {
         buttonBg.setStrokeStyle(2, parseInt((this.themeParams.button_color || '#3390EC').replace('#', ''), 16));
         
         // Create button text
-        const buttonText = this.add.text(buttonX, buttonY, 'START GAME', {
+        const buttonText = this.add.text(buttonX, buttonY, 'SANDBOX', {
             fontSize: '20px',
             fontFamily: 'Arial, sans-serif',
-            color: this.themeParams.button_color,
+            color: this.themeParams.button_color ?? '#3390EC',
             fontStyle: 'bold'
         });
         buttonText.setOrigin(0.5);
