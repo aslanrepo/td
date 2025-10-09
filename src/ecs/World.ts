@@ -1,6 +1,7 @@
-import { createWorld, registerComponent, IWorld, addEntity, removeEntity } from 'bitecs';
-import { RenderSystem } from './systems';
-import { Position, Renderable } from './components';
+import { createWorld, registerComponent, IWorld, addEntity, removeEntity, getAllEntities } from 'bitecs';
+import { PathMovementSystem } from './systems';
+import { createRenderSystem } from './systems/RenderSystemManager';
+import { Position, Renderable, Velocity, PathProgress } from './components';
 
 /**
  * GameWorld extends BitecsWorld with Phaser scene integration
@@ -18,10 +19,12 @@ export class GameWorld {
         // Register components
         registerComponent(this.world, Position);
         registerComponent(this.world, Renderable);
+        registerComponent(this.world, Velocity);
+        registerComponent(this.world, PathProgress);
 
         // Register systems
-        this.registerSystem(RenderSystem, 100); // Render last
-        // Later: this.registerSystem(MovementSystem, 10);
+        this.registerSystem(PathMovementSystem, 10); // Movement first
+        this.registerSystem(createRenderSystem(scene), 100); // Render last
     }
 
     registerSystem(system: any, priority: number) {
@@ -36,11 +39,17 @@ export class GameWorld {
         }
     }
 
-    create() {
+    createEntity() {
         return addEntity(this.world);
     }
 
-    destroy(eid: number) {
+    destroyEntity(eid: number) {
         removeEntity(this.world, eid);
+    }
+
+    cleanAllEntities() {
+        getAllEntities(this.world).forEach(eid => {
+            removeEntity(this.world, eid);
+        });
     }
 }

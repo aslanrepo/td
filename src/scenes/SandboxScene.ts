@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { TelegramService } from '@/services/TelegramService';
 import { TelegramThemeParams } from '@/types';
 import { GameWorld } from '../ecs';
-import { Position, Renderable } from '../ecs';
+import { Position, Renderable, Velocity, PathProgress } from '../ecs';
 import { addComponent } from 'bitecs';
+import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 
 /**
  * Sandbox Scene - Development and testing environment
@@ -28,6 +29,8 @@ export class SandboxScene extends Phaser.Scene {
      * Initialize scene with Telegram service
      */
     public init(): void {
+        this.events.on('shutdown', this.shutdown, this);
+        console.log('=== INITIALIZING SANDBOX SCENE ===');
         this.telegramService = this.game.registry.get('telegramService');
         this.themeParams = this.telegramService?.getThemeParams() || {
             bg_color: '#1a1a1a',
@@ -40,20 +43,34 @@ export class SandboxScene extends Phaser.Scene {
         this.ecsWorld.execute(delta);
     }
 
+    public shutdown(): void {
+        console.log('=== SHUTTING DOWN SANDBOX SCENE ===');
+        this.ecsWorld.cleanAllEntities();
+    }
+
     /**
      * Create sandbox scene elements
      */
     public create(): void {
+        console.log('=== CREATING SANDBOX SCENE ===');
         // Initialize ECS world
         this.ecsWorld = new GameWorld(this);
+        
+        // Register GameWorld in scene registry for system access
+        this.registry.set('gameWorld', this.ecsWorld);
 
         // Фон: простая зеленая лужайка (прямоугольник)
         const bg = this.add.graphics();
         bg.fillStyle(0x228B22); // Зеленый
         bg.fillRect(0, 0, this.scale.width, this.scale.height);
 
-        // Spawn test enemy
-        this.spawnEnemy(1);
+        // Draw waypoint path for debugging
+        this.drawWaypointPath();
+
+        // Spawn multiple test enemies
+        for (let i = 0; i < 3; i++) {
+            this.spawnEnemy(1);
+        }
 
         this.createBackButton(this.scale.width, this.scale.height);
     }
@@ -189,20 +206,61 @@ export class SandboxScene extends Phaser.Scene {
      * Spawn enemy entity with ECS components
      */
     private spawnEnemy(lvl: number) {
-        const eid = this.ecsWorld.create();
+        const eid = this.ecsWorld.createEntity();
 
         // Add components to entity
         addComponent(this.ecsWorld.world, Position, eid);
         addComponent(this.ecsWorld.world, Renderable, eid);
+        addComponent(this.ecsWorld.world, Velocity, eid);
+        addComponent(this.ecsWorld.world, PathProgress, eid);
 
         // Set component values
-        Position.x[eid] = 1;  // Start pos
-        Position.y[eid] = 5;
+        Position.x[eid] = WAYPOINTS[0].x;  // Start at first waypoint
+        Position.y[eid] = WAYPOINTS[0].y;
         Renderable.type[eid] = 0;  // Enemy
         Renderable.color[eid] = lvl === 1 ? 0xff0000 : 0x0000ff; // Red/blue
-        Renderable.size[eid] = 2;
+        Renderable.size[eid] = 0.1; // Smaller size for better movement visualization
+        Velocity.speed[eid] = 1.0; // 1 unit per second
+        PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
 
-        console.log(`Spawned enemy ${eid}`);
+        console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]})`);
+    }
+
+    /**
+     * Draw waypoint path for debugging
+     */
+    private drawWaypointPath(): void {
+        const pathGraphics = this.add.graphics();
+        const SCALE = 10; // Scale factor for visualization
+        
+        // Set line style for the path
+        pathGraphics.lineStyle(2, 0x666666); // Gray line, 2px width
+        
+        // Draw lines between waypoints
+        for (let i = 0; i < WAYPOINTS.length - 1; i++) {
+            const start = WAYPOINTS[i];
+            const end = WAYPOINTS[i + 1];
+            pathGraphics.lineBetween(
+                start.x * SCALE,
+                start.y * SCALE,
+                end.x * SCALE,
+                end.y * SCALE
+            );
+        }
+        
+        // Draw waypoint markers
+        pathGraphics.fillStyle(0x888888);
+        WAYPOINTS.forEach((waypoint, index) => {
+            pathGraphics.fillCircle(waypoint.x * SCALE, waypoint.y * SCALE, 3);
+            
+            // Add waypoint labels
+            this.add.text(waypoint.x * SCALE + 5, waypoint.y * SCALE - 5, `${index}`, {
+                fontSize: '12px',
+                color: '#ffffff'
+            });
+        });
+        
+        console.log('Waypoint path drawn with scale:', SCALE);
     }
 
     /**
