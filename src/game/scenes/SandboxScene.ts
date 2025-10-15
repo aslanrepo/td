@@ -1,28 +1,20 @@
-import Phaser from 'phaser';
-import { TelegramService } from '@/services/TelegramService';
-import { TelegramThemeParams } from '@/types';
+import { Scene } from 'phaser';
 import { GameWorld } from '../ecs';
 import { Position, Renderable, Velocity, PathProgress } from '../ecs';
 import { addComponent } from 'bitecs';
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
+import { EventBus } from '../EventBus';
 
 /**
  * Sandbox Scene - Development and testing environment
  * Implements ECS-like architecture with Phaser components
  * Uses vector graphics and dynamic Telegram theming
  */
-export class SandboxScene extends Phaser.Scene {
-    private telegramService?: TelegramService;
-    private themeParams: TelegramThemeParams;
+export class SandboxScene extends Scene {
     private ecsWorld!: GameWorld;
 
     constructor() {
         super({ key: 'SandboxScene' });
-        this.themeParams = {
-            bg_color: '#1a1a1a',
-            button_color: '#3390EC',
-            text_color: '#ffffff'
-        };
     }
 
     /**
@@ -31,12 +23,6 @@ export class SandboxScene extends Phaser.Scene {
     public init(): void {
         this.events.on('shutdown', this.shutdown, this);
         console.log('=== INITIALIZING SANDBOX SCENE ===');
-        this.telegramService = this.game.registry.get('telegramService');
-        this.themeParams = this.telegramService?.getThemeParams() || {
-            bg_color: '#1a1a1a',
-            button_color: '#3390EC',
-            text_color: '#ffffff'
-        };
     }
 
     override update(_time: number, delta: number): void {
@@ -73,6 +59,9 @@ export class SandboxScene extends Phaser.Scene {
         }
 
         this.createBackButton(this.scale.width, this.scale.height);
+        
+        // Emit the current scene ready event
+        EventBus.emit('current-scene-ready', this);
     }
 
     /**
@@ -92,7 +81,7 @@ export class SandboxScene extends Phaser.Scene {
         
         // Create button background using Graphics (vector-based)
         const buttonBg = this.add.graphics();
-        buttonBg.fillStyle(this.hexToNumber(this.themeParams.button_color || '#3390EC'));
+        buttonBg.fillStyle(this.hexToNumber('#3390EC'));
         buttonBg.fillRoundedRect(
             -buttonWidth / 2, 
             -buttonHeight / 2, 
@@ -133,7 +122,6 @@ export class SandboxScene extends Phaser.Scene {
         // Add multiple event listeners for debugging
         buttonContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             console.log('Button clicked! pointerdown event triggered at:', pointer.x, pointer.y);
-            this.telegramService?.hapticFeedback('impact');
             this.scene.start('MenuScene');
         });
         
@@ -157,7 +145,7 @@ export class SandboxScene extends Phaser.Scene {
                 buttonHeight, 
                 10
             );
-            buttonBg.lineStyle(2, this.hexToNumber(this.themeParams.button_color || '#3390EC'));
+            buttonBg.lineStyle(2, this.hexToNumber('#3390EC'));
             buttonBg.strokeRoundedRect(
                 -buttonWidth / 2, 
                 -buttonHeight / 2, 
@@ -165,13 +153,13 @@ export class SandboxScene extends Phaser.Scene {
                 buttonHeight, 
                 10
             );
-            buttonText.setColor(this.themeParams.button_color || '#3390EC');
+            buttonText.setColor('#3390EC');
         });
         
         buttonContainer.on('pointerout', () => {
             console.log('Button hover ended');
             buttonBg.clear();
-            buttonBg.fillStyle(this.hexToNumber(this.themeParams.button_color || '#3390EC'));
+            buttonBg.fillStyle(this.hexToNumber('#3390EC'));
             buttonBg.fillRoundedRect(
                 -buttonWidth / 2, 
                 -buttonHeight / 2, 
@@ -231,36 +219,33 @@ export class SandboxScene extends Phaser.Scene {
      */
     private drawWaypointPath(): void {
         const pathGraphics = this.add.graphics();
-        const SCALE = 10; // Scale factor for visualization
         
         // Set line style for the path
-        pathGraphics.lineStyle(2, 0x666666); // Gray line, 2px width
-        
+        pathGraphics.lineStyle(4, 0x666666); // Gray line, 2px width
+
         // Draw lines between waypoints
         for (let i = 0; i < WAYPOINTS.length - 1; i++) {
             const start = WAYPOINTS[i];
             const end = WAYPOINTS[i + 1];
             pathGraphics.lineBetween(
-                start.x * SCALE,
-                start.y * SCALE,
-                end.x * SCALE,
-                end.y * SCALE
+                start.x,
+                start.y,
+                end.x,
+                end.y
             );
         }
         
         // Draw waypoint markers
         pathGraphics.fillStyle(0x888888);
         WAYPOINTS.forEach((waypoint, index) => {
-            pathGraphics.fillCircle(waypoint.x * SCALE, waypoint.y * SCALE, 3);
+            const circle = pathGraphics.fillCircle(waypoint.x * 192, waypoint.y * 192, 3);
             
             // Add waypoint labels
-            this.add.text(waypoint.x * SCALE + 5, waypoint.y * SCALE - 5, `${index}`, {
-                fontSize: '12px',
+            const text = this.add.text(waypoint.x * 192, waypoint.y * 192, `${index}`, {
+                fontSize: '30px',
                 color: '#ffffff'
             });
         });
-        
-        console.log('Waypoint path drawn with scale:', SCALE);
     }
 
     /**
@@ -270,3 +255,4 @@ export class SandboxScene extends Phaser.Scene {
         return parseInt(hex.replace('#', ''), 16);
     }
 }
+

@@ -168,10 +168,6 @@ class SimpleRenderSystemManager {
     shape.setVisible(true);
     shape.setPosition(x * this.SCALE, y * this.SCALE);
 
-    // Add physics body if needed
-    if (this.scene && !sprite.body) {
-      this.scene.physics.add.existing(sprite);
-    }
     if (sprite.body && 'enable' in sprite.body) {
       (sprite.body as Phaser.Physics.Arcade.Body).enable = true;
     }
