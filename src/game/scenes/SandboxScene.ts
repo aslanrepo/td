@@ -1,7 +1,8 @@
+import { addComponent } from 'bitecs';
 import { Scene } from 'phaser';
+
 import { GameWorld } from '../ecs';
 import { Position, Renderable, Velocity, PathProgress } from '../ecs';
-import { addComponent } from 'bitecs';
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 import { EventBus } from '../EventBus';
 
@@ -207,8 +208,8 @@ export class SandboxScene extends Scene {
         Position.y[eid] = WAYPOINTS[0].y;
         Renderable.type[eid] = 0;  // Enemy
         Renderable.color[eid] = lvl === 1 ? 0xff0000 : 0x0000ff; // Red/blue
-        Renderable.size[eid] = 0.1; // Smaller size for better movement visualization
-        Velocity.speed[eid] = 1.0; // 1 unit per second
+        Renderable.size[eid] = 10; // Smaller size for better movement visualization
+        Velocity.speed[eid] = 1.5; // 1 unit per second
         PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
 
         console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]})`);
@@ -238,10 +239,10 @@ export class SandboxScene extends Scene {
         // Draw waypoint markers
         pathGraphics.fillStyle(0x888888);
         WAYPOINTS.forEach((waypoint, index) => {
-            const circle = pathGraphics.fillCircle(waypoint.x * 192, waypoint.y * 192, 3);
+            const circle = pathGraphics.fillCircle(waypoint.x, waypoint.y, 3);
             
             // Add waypoint labels
-            const text = this.add.text(waypoint.x * 192, waypoint.y * 192, `${index}`, {
+            const text = this.add.text(waypoint.x, waypoint.y, `${index}`, {
                 fontSize: '30px',
                 color: '#ffffff'
             });

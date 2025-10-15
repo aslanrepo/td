@@ -1,7 +1,8 @@
 import { createWorld, registerComponent, IWorld, addEntity, removeEntity, getAllEntities } from 'bitecs';
+
+import { Position, Renderable, Velocity, PathProgress } from './components';
 import { PathMovementSystem } from './systems';
 import { createRenderSystem } from './systems/RenderSystemManager';
-import { Position, Renderable, Velocity, PathProgress } from './components';
 
 /**
  * GameWorld extends BitecsWorld with Phaser scene integration

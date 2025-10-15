@@ -1,15 +1,16 @@
 import { defineSystem, defineQuery, IWorld } from 'bitecs';
+
 import { Position, Velocity, PathProgress, Renderable } from '../components';
 import { GameWorld } from '../World';
 
 // Waypoints defining the path enemies will follow
 const WAYPOINTS = [
-  { x: 0, y: 5 },
-  { x: 3, y: 5 },
-  { x: 3, y: 2 },
-  { x: 7, y: 2 },
-  { x: 7, y: 8 },
-  { x: 10, y: 8 }
+  { x: 0, y: 405 },
+  { x: 243, y: 405 },
+  { x: 243, y: 162 },
+  { x: 567, y: 162 },
+  { x: 567, y: 648 },
+  { x: 810, y: 648 }
 ];
 
 const THRESHOLD = 0.1; // Distance threshold to consider waypoint reached

@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+
 import { EventBus } from '../EventBus';
 
 export class MenuScene extends Scene
@@ -10,9 +11,7 @@ export class MenuScene extends Scene
 
     init()
     {
-        // We can't access the scene's width and height from here, so we need to get it from the game
-        const width = this.scale.width;
-        const height = this.scale.height;
+
     }
 
     create()
@@ -20,12 +19,12 @@ export class MenuScene extends Scene
         console.log('MenuScene created');
 
         // Add some text
-        this.add.text(512, 384, 'Tower Defense Game', {
+        this.add.text(this.scale.width / 2, this.scale.height / 2, 'Tower Defense Game', {
             fontSize: '48px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
-        this.add.text(512, 450, 'Click "Start Sandbox" to begin', {
+        this.add.text(this.scale.width / 2, this.scale.height / 2 + 100, 'Click "Start Sandbox" to begin', {
             fontSize: '24px',
             color: '#ffffff'
         }).setOrigin(0.5);

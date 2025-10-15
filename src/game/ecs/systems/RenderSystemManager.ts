@@ -1,6 +1,7 @@
 import { defineSystem, defineQuery, enterQuery, exitQuery, IWorld } from 'bitecs';
-import { Position, Renderable } from '../components';
 import Phaser from 'phaser';
+
+import { Position, Renderable } from '../components';
 
 /**
  * SimpleRenderSystemManager handles sprite creation, updates, and cleanup for ECS entities
@@ -12,8 +13,6 @@ class SimpleRenderSystemManager {
   private scene: Phaser.Scene | null = null;
   private initialized = false;
   
-  // Constants
-  private readonly SCALE = 10;
   private readonly ENEMY_TYPE = 0;
   
   // Pre-defined queries for performance
@@ -153,12 +152,12 @@ class SimpleRenderSystemManager {
     
     if (type === this.ENEMY_TYPE) {
       const circle = shape as Phaser.GameObjects.Arc;
-      circle.setRadius(size * this.SCALE);
+      circle.setRadius(size);
       circle.setFillStyle(color);
       shape.setDepth(1);
     } else {
       const rect = shape as Phaser.GameObjects.Rectangle;
-      rect.setSize(size * 2 * this.SCALE, size * 2 * this.SCALE);
+      rect.setSize(size, size);
       rect.setFillStyle(color);
       rect.setStrokeStyle(2, 0x000000);
       shape.setDepth(2);
@@ -166,7 +165,7 @@ class SimpleRenderSystemManager {
 
     shape.setActive(true);
     shape.setVisible(true);
-    shape.setPosition(x * this.SCALE, y * this.SCALE);
+    shape.setPosition(x, y);
 
     if (sprite.body && 'enable' in sprite.body) {
       (sprite.body as Phaser.Physics.Arcade.Body).enable = true;
@@ -186,7 +185,7 @@ class SimpleRenderSystemManager {
       if (sprite) {
         const x = Position.x[eid];
         const y = Position.y[eid];
-        (sprite as Phaser.GameObjects.Shape).setPosition(x * this.SCALE, y * this.SCALE);
+        (sprite as Phaser.GameObjects.Shape).setPosition(x, y);
       }
     }
   }

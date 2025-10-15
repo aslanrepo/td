@@ -1,15 +1,21 @@
-import { SandboxScene } from './scenes/SandboxScene';
+import { WEBGL, Game } from 'phaser';
+
 import { MenuScene } from './scenes/MenuScene';
-import { AUTO, Game } from 'phaser';
+import { SandboxScene } from './scenes/SandboxScene';
 
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {
-    type: AUTO,
-    width: 1024,
-    height: 768,
+    type: WEBGL,
+    width: 1920,
+    height: 1080,
     parent: 'game-container',
     backgroundColor: '#028af8',
+    antialias: false,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     scene: [
         MenuScene,
         SandboxScene

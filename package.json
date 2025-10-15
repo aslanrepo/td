@@ -1,6 +1,7 @@
 {
   "name": "td-game",
   "version": "1.0.0",
+  "type": "module",
   "description": "Tower Defense Game MVP for Telegram WebApp",
   "scripts": {
     "dev": "node log.js dev & vite --config vite/config.dev.mjs",
