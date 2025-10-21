@@ -13,6 +13,8 @@ import { EventBus } from '../EventBus';
  */
 export class SandboxScene extends Scene {
     private ecsWorld!: GameWorld;
+    coordsLabel: Phaser.GameObjects.Text;
+    pointer: Phaser.Input.Pointer;
 
     constructor() {
         super({ key: 'SandboxScene' });
@@ -27,6 +29,10 @@ export class SandboxScene extends Scene {
     }
 
     override update(_time: number, delta: number): void {
+        // Обновляем текст с координатами (округляем для читаемости)
+        this.coordsLabel.setText(
+            `(x: ${Math.round(this.pointer.x)}, y: ${Math.round(this.pointer.y)})`
+        );
         this.ecsWorld.execute(delta);
     }
 
@@ -39,10 +45,13 @@ export class SandboxScene extends Scene {
      * Create sandbox scene elements
      */
     public create(): void {
+
+        // Получаем активный указатель
+        this.pointer = this.input.activePointer;
         console.log('=== CREATING SANDBOX SCENE ===');
         // Initialize ECS world
         this.ecsWorld = new GameWorld(this);
-        
+
         // Register GameWorld in scene registry for system access
         this.registry.set('gameWorld', this.ecsWorld);
 
@@ -60,7 +69,15 @@ export class SandboxScene extends Scene {
         }
 
         this.createBackButton(this.scale.width, this.scale.height);
-        
+
+        // Создаём текстовую метку для координат
+        this.coordsLabel = this.add.text(1060, 1060, '(x, y)', {
+            fontSize: '16px',
+            fontFamily: 'Arial, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+
         // Emit the current scene ready event
         EventBus.emit('current-scene-ready', this);
     }
@@ -71,36 +88,36 @@ export class SandboxScene extends Scene {
     private createBackButton(width: number, height: number): void {
         console.log('=== CREATING BACK BUTTON ===');
         console.log('Button position:', width / 2, height / 2 + 100);
-        
+
         const buttonWidth = 150;
         const buttonHeight = 50;
         const buttonX = width / 2;
         const buttonY = height / 2 + 100;
-        
+
         // Create button using Container for better event handling
         const buttonContainer = this.add.container(buttonX, buttonY);
-        
+
         // Create button background using Graphics (vector-based)
         const buttonBg = this.add.graphics();
         buttonBg.fillStyle(this.hexToNumber('#3390EC'));
         buttonBg.fillRoundedRect(
-            -buttonWidth / 2, 
-            -buttonHeight / 2, 
-            buttonWidth, 
-            buttonHeight, 
+            -buttonWidth / 2,
+            -buttonHeight / 2,
+            buttonWidth,
+            buttonHeight,
             10
         );
-        
+
         // Add button border
         buttonBg.lineStyle(2, 0xffffff);
         buttonBg.strokeRoundedRect(
-            -buttonWidth / 2, 
-            -buttonHeight / 2, 
-            buttonWidth, 
-            buttonHeight, 
+            -buttonWidth / 2,
+            -buttonHeight / 2,
+            buttonWidth,
+            buttonHeight,
             10
         );
-        
+
         // Create button text
         const buttonText = this.add.text(0, 0, 'BACK2 TO MENU', {
             fontSize: '16px',
@@ -109,76 +126,76 @@ export class SandboxScene extends Scene {
             fontStyle: 'bold'
         });
         buttonText.setOrigin(0.5);
-        
+
         // Add both to container
         buttonContainer.add([buttonBg, buttonText]);
-        
+
         // Make container interactive with explicit hit area
         buttonContainer.setInteractive(
             new Phaser.Geom.Rectangle(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight),
             Phaser.Geom.Rectangle.Contains
         );
         console.log('Button container created and set as interactive with hit area');
-        
+
         // Add multiple event listeners for debugging
         buttonContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             console.log('Button clicked! pointerdown event triggered at:', pointer.x, pointer.y);
             this.scene.start('MenuScene');
         });
-        
+
         buttonContainer.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             console.log('Button pointerup event triggered at:', pointer.x, pointer.y);
         });
-        
+
         // Add click event as alternative
         buttonContainer.on('click', (pointer: Phaser.Input.Pointer) => {
             console.log('Button click event triggered at:', pointer.x, pointer.y);
         });
-        
+
         buttonContainer.on('pointerover', () => {
             console.log('Button hover started');
             buttonBg.clear();
             buttonBg.fillStyle(0xffffff);
             buttonBg.fillRoundedRect(
-                -buttonWidth / 2, 
-                -buttonHeight / 2, 
-                buttonWidth, 
-                buttonHeight, 
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
                 10
             );
             buttonBg.lineStyle(2, this.hexToNumber('#3390EC'));
             buttonBg.strokeRoundedRect(
-                -buttonWidth / 2, 
-                -buttonHeight / 2, 
-                buttonWidth, 
-                buttonHeight, 
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
                 10
             );
             buttonText.setColor('#3390EC');
         });
-        
+
         buttonContainer.on('pointerout', () => {
             console.log('Button hover ended');
             buttonBg.clear();
             buttonBg.fillStyle(this.hexToNumber('#3390EC'));
             buttonBg.fillRoundedRect(
-                -buttonWidth / 2, 
-                -buttonHeight / 2, 
-                buttonWidth, 
-                buttonHeight, 
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
                 10
             );
             buttonBg.lineStyle(2, 0xffffff);
             buttonBg.strokeRoundedRect(
-                -buttonWidth / 2, 
-                -buttonHeight / 2, 
-                buttonWidth, 
-                buttonHeight, 
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
                 10
             );
             buttonText.setColor('#ffffff');
         });
-        
+
         // Add button animation
         this.tweens.add({
             targets: buttonContainer,
@@ -208,8 +225,8 @@ export class SandboxScene extends Scene {
         Position.y[eid] = WAYPOINTS[0].y;
         Renderable.type[eid] = 0;  // Enemy
         Renderable.color[eid] = lvl === 1 ? 0xff0000 : 0x0000ff; // Red/blue
-        Renderable.size[eid] = 10; // Smaller size for better movement visualization
-        Velocity.speed[eid] = 1.5; // 1 unit per second
+        Renderable.size[eid] = 25; // Smaller size for better movement visualization
+        Velocity.speed[eid] = 100; // 1 unit per second
         PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
 
         console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]})`);
@@ -220,7 +237,7 @@ export class SandboxScene extends Scene {
      */
     private drawWaypointPath(): void {
         const pathGraphics = this.add.graphics();
-        
+
         // Set line style for the path
         pathGraphics.lineStyle(4, 0x666666); // Gray line, 2px width
 
@@ -235,12 +252,12 @@ export class SandboxScene extends Scene {
                 end.y
             );
         }
-        
+
         // Draw waypoint markers
         pathGraphics.fillStyle(0x888888);
         WAYPOINTS.forEach((waypoint, index) => {
             const circle = pathGraphics.fillCircle(waypoint.x, waypoint.y, 3);
-            
+
             // Add waypoint labels
             const text = this.add.text(waypoint.x, waypoint.y, `${index}`, {
                 fontSize: '30px',

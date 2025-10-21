@@ -5,15 +5,16 @@ import { GameWorld } from '../World';
 
 // Waypoints defining the path enemies will follow
 const WAYPOINTS = [
-  { x: 0, y: 405 },
-  { x: 243, y: 405 },
-  { x: 243, y: 162 },
-  { x: 567, y: 162 },
-  { x: 567, y: 648 },
-  { x: 810, y: 648 }
+  { x: 0, y: 400 },
+  { x: 700, y: 400 },
+  { x: 700, y: 150 },
+  { x: 500, y: 150 },
+  { x: 750, y: 550 },
+  { x: 750, y: 800 },
+  { x: 1000, y: 800 }
 ];
 
-const THRESHOLD = 0.1; // Distance threshold to consider waypoint reached
+const THRESHOLD = 5; // Distance threshold to consider waypoint reached
 
 export const PathMovementSystem = defineSystem((world: IWorld, scene: Phaser.Scene, delta: number) => {
   const movementQuery = defineQuery([Position, Velocity, PathProgress, Renderable]);
