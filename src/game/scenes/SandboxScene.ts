@@ -15,6 +15,7 @@ export class SandboxScene extends Scene {
     private ecsWorld!: GameWorld;
     coordsLabel: Phaser.GameObjects.Text;
     pointer: Phaser.Input.Pointer;
+    private createdPoints: Phaser.GameObjects.Container[] = [];
 
     constructor() {
         super({ key: 'SandboxScene' });
@@ -39,6 +40,9 @@ export class SandboxScene extends Scene {
     public shutdown(): void {
         console.log('=== SHUTTING DOWN SANDBOX SCENE ===');
         this.ecsWorld.cleanAllEntities();
+        // Clean up created points
+        this.createdPoints.forEach(point => point.destroy());
+        this.createdPoints = [];
     }
 
     /**
@@ -77,6 +81,9 @@ export class SandboxScene extends Scene {
             color: '#ffffff',
             fontStyle: 'bold'
         });
+
+        // Add click event listener for point creation
+        this.input.on('pointerdown', this.createPointAtClick, this);
 
         // Emit the current scene ready event
         EventBus.emit('current-scene-ready', this);
@@ -256,14 +263,57 @@ export class SandboxScene extends Scene {
         // Draw waypoint markers
         pathGraphics.fillStyle(0x888888);
         WAYPOINTS.forEach((waypoint, index) => {
-            const circle = pathGraphics.fillCircle(waypoint.x, waypoint.y, 3);
+            pathGraphics.fillCircle(waypoint.x, waypoint.y, 3);
 
             // Add waypoint labels
-            const text = this.add.text(waypoint.x, waypoint.y, `${index}`, {
+            this.add.text(waypoint.x, waypoint.y, `${index}`, {
                 fontSize: '30px',
                 color: '#ffffff'
             });
         });
+    }
+
+    /**
+     * Create point at click location with coordinates label
+     */
+    private createPointAtClick(pointer: Phaser.Input.Pointer): void {
+        // Don't create point if clicking on the back button
+        if (pointer.x >= this.scale.width / 2 - 75 && pointer.x <= this.scale.width / 2 + 75 &&
+            pointer.y >= this.scale.height / 2 + 75 && pointer.y <= this.scale.height / 2 + 125) {
+            return;
+        }
+
+        const x = Math.round(pointer.x);
+        const y = Math.round(pointer.y);
+
+        // Create container for point and label
+        const pointContainer = this.add.container(x, y);
+
+        // Create visual point (circle)
+        const pointGraphics = this.add.graphics();
+        pointGraphics.fillStyle(0xffff00); // Yellow color
+        pointGraphics.fillCircle(0, 0, 8);
+        pointGraphics.lineStyle(2, 0x000000);
+        pointGraphics.strokeCircle(0, 0, 8);
+
+        // Create coordinate label above the point
+        const coordText = this.add.text(0, -25, `(${x}, ${y})`, {
+            fontSize: '14px',
+            fontFamily: 'Arial, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            backgroundColor: '#000000',
+            padding: { x: 4, y: 2 }
+        });
+        coordText.setOrigin(0.5);
+
+        // Add both to container
+        pointContainer.add([pointGraphics, coordText]);
+
+        // Store the point for cleanup
+        this.createdPoints.push(pointContainer);
+
+        console.log(`Created point at (${x}, ${y})`);
     }
 
     /**
