@@ -4,14 +4,21 @@ import { Position, Velocity, PathProgress, Renderable } from '../components';
 import { GameWorld } from '../World';
 
 // Waypoints defining the path enemies will follow
+// Based on user-created points for custom path
 const WAYPOINTS = [
-  { x: 0, y: 400 },
-  { x: 700, y: 400 },
-  { x: 700, y: 150 },
-  { x: 500, y: 150 },
-  { x: 750, y: 550 },
-  { x: 750, y: 800 },
-  { x: 1000, y: 800 }
+  { x: 0, y: 401 },
+  { x: 753, y: 420 },
+  { x: 745, y: 180 },
+  { x: 485, y: 172 },
+  { x: 494, y: 818 },
+  { x: 235, y: 813 },
+  { x: 229, y: 646 },
+  { x: 957, y: 600 },
+  { x: 949, y: 357 },
+  { x: 1113, y: 355 },
+  { x: 1115, y: 805 },
+  { x: 736, y: 794 },
+  { x: 736, y: 1080 }
 ];
 
 const THRESHOLD = 5; // Distance threshold to consider waypoint reached
