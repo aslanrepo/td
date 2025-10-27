@@ -2,7 +2,7 @@ import { addComponent } from 'bitecs';
 import { Scene } from 'phaser';
 
 import { GameWorld } from '../ecs';
-import { Position, Renderable, Velocity, PathProgress } from '../ecs';
+import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target } from '../ecs';
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 import { EventBus } from '../EventBus';
 
@@ -71,6 +71,9 @@ export class SandboxScene extends Scene {
         for (let i = 0; i < 3; i++) {
             this.spawnEnemy(1);
         }
+
+        // Create test tower
+        this.createTower(768, 383, 0); // Dart tower at specified coordinates
 
         this.createBackButton(this.scale.width, this.scale.height);
 
@@ -226,6 +229,7 @@ export class SandboxScene extends Scene {
         addComponent(this.ecsWorld.world, Renderable, eid);
         addComponent(this.ecsWorld.world, Velocity, eid);
         addComponent(this.ecsWorld.world, PathProgress, eid);
+        addComponent(this.ecsWorld.world, Enemy, eid);
 
         // Set component values
         Position.x[eid] = WAYPOINTS[0].x;  // Start at first waypoint
@@ -237,6 +241,38 @@ export class SandboxScene extends Scene {
         PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
 
         console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]})`);
+    }
+
+    /**
+     * Create tower entity with ECS components
+     */
+    private createTower(x: number, y: number, towerType: number) {
+        const eid = this.ecsWorld.createEntity();
+
+        // Add components to entity
+        addComponent(this.ecsWorld.world, Position, eid);
+        addComponent(this.ecsWorld.world, Renderable, eid);
+        addComponent(this.ecsWorld.world, Tower, eid);
+        addComponent(this.ecsWorld.world, Range, eid);
+        addComponent(this.ecsWorld.world, Target, eid);
+
+        // Set component values
+        Position.x[eid] = x;
+        Position.y[eid] = y;
+        Tower.type[eid] = towerType; // 0 = dart, 1 = cannon, 2 = ice
+        
+        // Set range based on tower type
+        const rangeValues = [50, 50, 50]; // dart, cannon, ice
+        Range.value[eid] = rangeValues[towerType] || 50;
+        
+        Target.eid[eid] = 0; // No target initially
+        
+        // Set visual properties
+        Renderable.type[eid] = 1; // Tower type for rendering
+        Renderable.color[eid] = towerType === 0 ? 0x00ff00 : towerType === 1 ? 0xff8800 : 0x0088ff; // Green/Orange/Blue
+        Renderable.size[eid] = 30; // Tower size
+
+        console.log(`Created tower ${eid} at (${x}, ${y}) with type ${towerType} and range ${Range.value[eid]}`);
     }
 
     /**

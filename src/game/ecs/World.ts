@@ -1,8 +1,9 @@
 import { createWorld, registerComponent, IWorld, addEntity, removeEntity, getAllEntities } from 'bitecs';
 
-import { Position, Renderable, Velocity, PathProgress } from './components';
+import { Position, Renderable, Velocity, PathProgress, Tower, Range, Enemy, Target } from './components';
 import { PathMovementSystem } from './systems';
 import { createRenderSystem } from './systems/RenderSystemManager';
+import { createTargetSystem } from './systems/TargetSystemManager';
 
 /**
  * GameWorld extends BitecsWorld with Phaser scene integration
@@ -22,9 +23,14 @@ export class GameWorld {
         registerComponent(this.world, Renderable);
         registerComponent(this.world, Velocity);
         registerComponent(this.world, PathProgress);
+        registerComponent(this.world, Tower);
+        registerComponent(this.world, Range);
+        registerComponent(this.world, Enemy);
+        registerComponent(this.world, Target);
 
         // Register systems
         this.registerSystem(PathMovementSystem, 10); // Movement first
+        this.registerSystem(createTargetSystem(scene), 50); // Targeting after movement
         this.registerSystem(createRenderSystem(scene), 100); // Render last
     }
 
