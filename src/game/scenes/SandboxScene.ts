@@ -2,7 +2,7 @@ import { addComponent } from 'bitecs';
 import { Scene } from 'phaser';
 
 import { GameWorld } from '../ecs';
-import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target } from '../ecs';
+import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target, NO_TARGET } from '../ecs';
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 import { EventBus } from '../EventBus';
 
@@ -265,7 +265,7 @@ export class SandboxScene extends Scene {
         const rangeValues = [50, 50, 50]; // dart, cannon, ice
         Range.value[eid] = rangeValues[towerType] || 50;
         
-        Target.eid[eid] = 0; // No target initially
+        Target.eid[eid] = NO_TARGET; // No target initially
         
         // Set visual properties
         Renderable.type[eid] = 1; // Tower type for rendering

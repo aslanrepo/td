@@ -1,7 +1,7 @@
 import { defineSystem, defineQuery, IWorld } from 'bitecs';
 import Phaser from 'phaser';
 
-import { Position, Range, Target, Enemy, PathProgress, Tower } from '../components';
+import { Position, Range, Target, Enemy, PathProgress, Tower, NO_TARGET } from '../components';
 
 /**
  * TargetSystemManager handles tower targeting logic for ECS entities
@@ -62,29 +62,27 @@ class TargetSystemManager {
     const prevTarget = Target.eid[towerEid]; // For logging
 
     let bestTarget: number | null = null;
-    let bestProgress = -1;
 
-    // Search for first suitable enemy in range (strategy "first")
+    // Search for first suitable enemy in range (enemies are already sorted by progress descending)
     for (const enemyEid of sortedEnemies) {
       const ex = Position.x[enemyEid];
       const ey = Position.y[enemyEid];
       const dist = Math.hypot(ex - tx, ey - ty); // Distance calculation
 
-      if (dist <= range && PathProgress.currentWaypoint[enemyEid] > bestProgress) {
+      if (dist <= range) {
         bestTarget = enemyEid;
-        bestProgress = PathProgress.currentWaypoint[enemyEid];
-        break; // Take first suitable enemy by sorting
+        break; // Take first suitable enemy (already sorted by progress)
       }
     }
 
-    // Update target (0 = no target, idle state)
-    Target.eid[towerEid] = bestTarget || 0;
+    // Update target (NO_TARGET = no target, idle state)
+    Target.eid[towerEid] = bestTarget !== null ? bestTarget : NO_TARGET;
 
     // Debug logging
     if (this.DEBUG) {
-      if (bestTarget && prevTarget !== bestTarget) {
+      if (bestTarget !== null && prevTarget !== bestTarget) {
         console.log(`Tower ID: ${towerEid} targeting Enemy ID: ${bestTarget}`);
-      } else if (!bestTarget && prevTarget !== 0) {
+      } else if (bestTarget === null && prevTarget !== NO_TARGET) {
         console.log(`Tower ID: ${towerEid} lost target, now idle`);
       }
     }
