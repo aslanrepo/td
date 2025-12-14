@@ -64,22 +64,25 @@ class SimpleRenderSystemManager {
 
   /**
    * Create a new sprite object for the given entity type
+   * All visual properties (size, color) are taken from Renderable component
    * @param type - Entity type (0 for enemy, 1 for tower, 2 for projectile)
+   * @param size - Size from Renderable component
+   * @param color - Color from Renderable component
    * @returns New sprite object or null if scene is not available
    */
-  private createSprite(type: number): Phaser.GameObjects.GameObject | null {
+  private createSprite(type: number, size: number, color: number): Phaser.GameObjects.GameObject | null {
     if (!this.scene) return null;
     
-    // Create new sprite object each time (no object pooling)
+    // Create sprite with size and color from Renderable component
     let sprite: Phaser.GameObjects.GameObject;
     
     if (type === this.ENEMY_TYPE) {
-      sprite = this.scene.add.circle(0, 0, 10, 0xff0000);
+      sprite = this.scene.add.circle(0, 0, size, color);
     } else if (type === this.PROJECTILE_TYPE) {
-      sprite = this.scene.add.circle(0, 0, 5, 0xffff00);
+      sprite = this.scene.add.circle(0, 0, size, color);
     } else {
       // Tower type (default)
-      sprite = this.scene.add.rectangle(0, 0, 20, 20, 0x00ff00);
+      sprite = this.scene.add.rectangle(0, 0, size, size, color);
     }
     
     return sprite;
@@ -124,6 +127,7 @@ class SimpleRenderSystemManager {
 
   /**
    * Create and configure a sprite for a specific entity
+   * All visual properties are read from Renderable component
    * @param eid - Entity ID to create sprite for
    */
   private createSpriteForEntity(eid: number) {
@@ -133,52 +137,46 @@ class SimpleRenderSystemManager {
     const color = Renderable.color[eid];
     const size = Renderable.size[eid];
 
-    const sprite = this.createSprite(type);
+    // Create sprite with size and color from Renderable component
+    const sprite = this.createSprite(type, size, color);
     if (!sprite) return;
 
-    this.configureSprite(sprite, type, size, color, x, y);
+    // Configure additional properties (depth, stroke, position, etc.)
+    this.configureSprite(sprite, type, x, y);
     this.spriteMap.set(eid, sprite);
   }
 
   /**
-   * Configure sprite properties based on entity data
+   * Configure sprite properties based on entity type
+   * Size and color are already set during sprite creation from Renderable component
+   * This method only sets type-specific properties (depth, stroke, etc.)
    * @param sprite - Sprite object to configure
    * @param type - Entity type (0 for enemy, 1 for tower, 2 for projectile)
-   * @param size - Entity size
-   * @param color - Entity color
    * @param x - X position
    * @param y - Y position
    */
   private configureSprite(
     sprite: Phaser.GameObjects.GameObject,
     type: number,
-    size: number,
-    color: number,
     x: number,
     y: number
   ) {
     const shape = sprite as Phaser.GameObjects.Shape;
     
+    // Set depth based on entity type (rendering order)
     if (type === this.ENEMY_TYPE) {
-      const circle = shape as Phaser.GameObjects.Arc;
-      circle.setRadius(size);
-      circle.setFillStyle(color);
       shape.setDepth(1);
     } else if (type === this.PROJECTILE_TYPE) {
-      const circle = shape as Phaser.GameObjects.Arc;
-      circle.setRadius(size);
-      circle.setFillStyle(color);
       // Projectiles should be rendered on top of enemies but below towers
       shape.setDepth(3);
     } else {
-      // Tower type
+      // Tower type - add stroke for better visibility
       const rect = shape as Phaser.GameObjects.Rectangle;
-      rect.setSize(size, size);
-      rect.setFillStyle(color);
       rect.setStrokeStyle(2, 0x000000);
       shape.setDepth(2);
     }
 
+    // Set common properties
     shape.setActive(true);
     shape.setVisible(true);
     shape.setPosition(x, y);
