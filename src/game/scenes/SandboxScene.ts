@@ -2,7 +2,7 @@ import { addComponent } from 'bitecs';
 import { Scene } from 'phaser';
 
 import { GameWorld } from '../ecs';
-import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target, NO_TARGET } from '../ecs';
+import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target, Firing, NO_TARGET } from '../ecs';
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 import { EventBus } from '../EventBus';
 
@@ -163,7 +163,6 @@ export class SandboxScene extends Scene {
         });
 
         buttonContainer.on('pointerover', () => {
-            console.log('Button hover started');
             buttonBg.clear();
             buttonBg.fillStyle(0xffffff);
             buttonBg.fillRoundedRect(
@@ -185,7 +184,6 @@ export class SandboxScene extends Scene {
         });
 
         buttonContainer.on('pointerout', () => {
-            console.log('Button hover ended');
             buttonBg.clear();
             buttonBg.fillStyle(this.hexToNumber('#3390EC'));
             buttonBg.fillRoundedRect(
@@ -255,6 +253,7 @@ export class SandboxScene extends Scene {
         addComponent(this.ecsWorld.world, Tower, eid);
         addComponent(this.ecsWorld.world, Range, eid);
         addComponent(this.ecsWorld.world, Target, eid);
+        addComponent(this.ecsWorld.world, Firing, eid);
 
         // Set component values
         Position.x[eid] = x;
@@ -266,6 +265,12 @@ export class SandboxScene extends Scene {
         Range.value[eid] = rangeValues[towerType] || 50;
         
         Target.eid[eid] = NO_TARGET; // No target initially
+        
+        // Set firing properties
+        // Fire interval in milliseconds (e.g., 1000ms = 1 shot per second)
+        const fireIntervals = [1000, 1500, 2000]; // dart, cannon, ice
+        Firing.fireInterval[eid] = fireIntervals[towerType] || 1000;
+        Firing.lastShotTime[eid] = 0; // Can fire immediately
         
         // Set visual properties
         Renderable.type[eid] = 1; // Tower type for rendering

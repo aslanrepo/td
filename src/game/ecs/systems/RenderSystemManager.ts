@@ -14,6 +14,8 @@ class SimpleRenderSystemManager {
   private initialized = false;
   
   private readonly ENEMY_TYPE = 0;
+  private readonly TOWER_TYPE = 1;
+  private readonly PROJECTILE_TYPE = 2;
   
   // Pre-defined queries for performance
   private readonly entityQuery = defineQuery([Position, Renderable]);
@@ -62,16 +64,23 @@ class SimpleRenderSystemManager {
 
   /**
    * Create a new sprite object for the given entity type
-   * @param type - Entity type (0 for enemy, 1 for tower)
+   * @param type - Entity type (0 for enemy, 1 for tower, 2 for projectile)
    * @returns New sprite object or null if scene is not available
    */
   private createSprite(type: number): Phaser.GameObjects.GameObject | null {
     if (!this.scene) return null;
     
     // Create new sprite object each time (no object pooling)
-    const sprite = type === this.ENEMY_TYPE 
-      ? this.scene.add.circle(0, 0, 10, 0xff0000)
-      : this.scene.add.rectangle(0, 0, 20, 20, 0x00ff00);
+    let sprite: Phaser.GameObjects.GameObject;
+    
+    if (type === this.ENEMY_TYPE) {
+      sprite = this.scene.add.circle(0, 0, 10, 0xff0000);
+    } else if (type === this.PROJECTILE_TYPE) {
+      sprite = this.scene.add.circle(0, 0, 5, 0xffff00);
+    } else {
+      // Tower type (default)
+      sprite = this.scene.add.rectangle(0, 0, 20, 20, 0x00ff00);
+    }
     
     return sprite;
   }
@@ -134,7 +143,7 @@ class SimpleRenderSystemManager {
   /**
    * Configure sprite properties based on entity data
    * @param sprite - Sprite object to configure
-   * @param type - Entity type (0 for enemy, 1 for tower)
+   * @param type - Entity type (0 for enemy, 1 for tower, 2 for projectile)
    * @param size - Entity size
    * @param color - Entity color
    * @param x - X position
@@ -155,7 +164,14 @@ class SimpleRenderSystemManager {
       circle.setRadius(size);
       circle.setFillStyle(color);
       shape.setDepth(1);
+    } else if (type === this.PROJECTILE_TYPE) {
+      const circle = shape as Phaser.GameObjects.Arc;
+      circle.setRadius(size);
+      circle.setFillStyle(color);
+      // Projectiles should be rendered on top of enemies but below towers
+      shape.setDepth(3);
     } else {
+      // Tower type
       const rect = shape as Phaser.GameObjects.Rectangle;
       rect.setSize(size, size);
       rect.setFillStyle(color);

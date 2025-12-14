@@ -9,3 +9,6 @@ export * from './Tower';
 export * from './Range';
 export * from './Enemy';
 export * from './Target';
+export * from './Firing';
+export * from './Projectile';
+export * from './Direction';

@@ -3,3 +3,4 @@
  */
 export * from './PathMovementSystem';
 export * from './TargetSystemManager';
+export * from './FiringSystem';
