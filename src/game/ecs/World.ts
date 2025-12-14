@@ -1,7 +1,7 @@
 import { createWorld, registerComponent, IWorld, addEntity, removeEntity, getAllEntities } from 'bitecs';
 
 import { Position, Renderable, Velocity, PathProgress, Tower, Range, Enemy, Target, Firing, Projectile, Direction } from './components';
-import { PathMovementSystem, ProjectileMovementSystem, FiringSystem } from './systems';
+import { createPathMovementSystem, createProjectileMovementSystem, createFiringSystem } from './systems';
 import { createRenderSystem } from './systems/RenderSystemManager';
 import { createTargetSystem } from './systems/TargetSystemManager';
 
@@ -32,10 +32,10 @@ export class GameWorld {
         registerComponent(this.world, Direction);
 
         // Register systems
-        this.registerSystem(PathMovementSystem, 10); // Enemy movement first
+        this.registerSystem(createPathMovementSystem(scene), 10); // Enemy movement first
         this.registerSystem(createTargetSystem(scene), 50); // Targeting after movement
-        this.registerSystem(FiringSystem, 60); // Firing after targeting
-        this.registerSystem(ProjectileMovementSystem, 65); // Projectile movement after creation
+        this.registerSystem(createFiringSystem(scene), 60); // Firing after targeting
+        this.registerSystem(createProjectileMovementSystem(scene), 65); // Projectile movement after creation
         this.registerSystem(createRenderSystem(scene), 100); // Render last
     }
 
