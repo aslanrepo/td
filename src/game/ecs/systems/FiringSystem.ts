@@ -7,8 +7,9 @@ import { GameWorld } from '../World';
 /**
  * Constant projectile speed (high value for fast, nearly instant travel)
  * This ensures projectiles move in a straight line at constant speed
+ * Fast speed guarantees projectiles hit their targets without needing to track moving enemies
  */
-const PROJECTILE_SPEED = 1000; // pixels per second
+const PROJECTILE_SPEED = 8000; // pixels per second (fast enough to hit moving targets)
 
 /**
  * Default projectile lifetime in milliseconds
@@ -33,8 +34,8 @@ const PROJECTILE_RENDER_TYPE = 2;
  * - Creates projectile entities
  * - Updates tower's last shot time
  * 
- * Note: This system only initiates shots. Projectile movement and collision
- * detection are handled by other systems (PathMovementSystem, collision systems).
+ * Note: This system only initiates shots. Projectile movement is handled by
+ * ProjectileMovementSystem, collision detection is handled by other systems.
  */
 export const FiringSystem = defineSystem((world: IWorld, scene: Phaser.Scene, delta: number) => {
   // Query for towers that can shoot (have Tower, Position, Target, and Firing components)
