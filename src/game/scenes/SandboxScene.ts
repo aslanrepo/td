@@ -2,7 +2,7 @@ import { addComponent } from 'bitecs';
 import { Scene } from 'phaser';
 
 import { GameWorld } from '../ecs';
-import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target, Firing, NO_TARGET } from '../ecs';
+import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target, Firing, NO_TARGET, Health } from '../ecs';
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 import { EventBus } from '../EventBus';
 
@@ -68,7 +68,7 @@ export class SandboxScene extends Scene {
         this.drawWaypointPath();
 
         // Spawn multiple test enemies
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 1; i++) {
             this.spawnEnemy(1);
         }
 
@@ -228,6 +228,7 @@ export class SandboxScene extends Scene {
         addComponent(this.ecsWorld.world, Velocity, eid);
         addComponent(this.ecsWorld.world, PathProgress, eid);
         addComponent(this.ecsWorld.world, Enemy, eid);
+        addComponent(this.ecsWorld.world, Health, eid);
 
         // Set component values
         Position.x[eid] = WAYPOINTS[0].x;  // Start at first waypoint
@@ -237,8 +238,13 @@ export class SandboxScene extends Scene {
         Renderable.size[eid] = 25; // Smaller size for better movement visualization
         Velocity.speed[eid] = 100; // 1 unit per second
         PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
+        
+        // Set health values (100 HP for level 1 enemies)
+        const maxHp = 1;
+        Health.maxHp[eid] = maxHp;
+        Health.currentHp[eid] = maxHp;
 
-        console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]})`);
+        console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]}) with ${maxHp} HP`);
     }
 
     /**
@@ -261,8 +267,8 @@ export class SandboxScene extends Scene {
         Tower.type[eid] = towerType; // 0 = dart, 1 = cannon, 2 = ice
         
         // Set range based on tower type
-        const rangeValues = [50, 50, 50]; // dart, cannon, ice
-        Range.value[eid] = rangeValues[towerType] || 50;
+        const rangeValues = [100, 100, 100]; // dart, cannon, ice (doubled from 50)
+        Range.value[eid] = rangeValues[towerType] || 100;
         
         Target.eid[eid] = NO_TARGET; // No target initially
         

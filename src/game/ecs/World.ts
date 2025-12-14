@@ -1,7 +1,7 @@
 import { createWorld, registerComponent, IWorld, addEntity, removeEntity, getAllEntities } from 'bitecs';
 
-import { Position, Renderable, Velocity, PathProgress, Tower, Range, Enemy, Target, Firing, Projectile, Direction } from './components';
-import { createPathMovementSystem, createProjectileMovementSystem, createFiringSystem } from './systems';
+import { Position, Renderable, Velocity, PathProgress, Tower, Range, Enemy, Target, Firing, Projectile, Direction, Health, Hit, Dead } from './components';
+import { createPathMovementSystem, createProjectileMovementSystem, createFiringSystem, createProjectileLifetimeSystem, createCollisionSystem, createDamageSystem, createDeathSystem } from './systems';
 import { createRenderSystem } from './systems/RenderSystemManager';
 import { createTargetSystem } from './systems/TargetSystemManager';
 
@@ -30,12 +30,19 @@ export class GameWorld {
         registerComponent(this.world, Firing);
         registerComponent(this.world, Projectile);
         registerComponent(this.world, Direction);
+        registerComponent(this.world, Health);
+        registerComponent(this.world, Hit);
+        registerComponent(this.world, Dead);
 
         // Register systems
         this.registerSystem(createPathMovementSystem(scene), 10); // Enemy movement first
         this.registerSystem(createTargetSystem(scene), 50); // Targeting after movement
         this.registerSystem(createFiringSystem(scene), 60); // Firing after targeting
         this.registerSystem(createProjectileMovementSystem(scene), 65); // Projectile movement after creation
+        this.registerSystem(createProjectileLifetimeSystem(scene), 66); // Check projectile lifetime
+        this.registerSystem(createCollisionSystem(scene), 70); // Detect collisions
+        this.registerSystem(createDamageSystem(scene), 75); // Apply damage
+        this.registerSystem(createDeathSystem(scene), 80); // Remove dead entities
         this.registerSystem(createRenderSystem(scene), 100); // Render last
     }
 

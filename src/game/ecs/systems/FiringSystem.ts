@@ -5,11 +5,11 @@ import { Position, Target, Firing, Projectile, Renderable, Tower, Enemy, NO_TARG
 import { GameWorld } from '../World';
 
 /**
- * Constant projectile speed (high value for fast, nearly instant travel)
+ * Constant projectile speed
  * This ensures projectiles move in a straight line at constant speed
- * Fast speed guarantees projectiles hit their targets without needing to track moving enemies
+ * Speed is set to be visible but fast enough to hit moving targets
  */
-const PROJECTILE_SPEED = 8000; // pixels per second (fast enough to hit moving targets)
+const PROJECTILE_SPEED = 1500; // pixels per second (visible but fast enough to hit moving targets)
 
 /**
  * Default projectile lifetime in milliseconds
@@ -103,8 +103,6 @@ class FiringSystemManager {
         // Tower is still on cooldown
         continue;
       }
-
-      console.log("projectile fired");
 
       // Step 4: Calculate direction vector from tower to target
       const towerX = Position.x[towerEid];
