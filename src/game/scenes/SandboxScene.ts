@@ -1,4 +1,4 @@
-import { addComponent } from 'bitecs';
+import { addComponent, defineQuery } from 'bitecs';
 import { Scene } from 'phaser';
 
 import { GameWorld } from '../ecs';
@@ -19,6 +19,12 @@ export class SandboxScene extends Scene {
     private sandboxPanel!: Phaser.GameObjects.Container;
     private towerIcon: Phaser.GameObjects.Container | null = null;
     private isDraggingTower = false;
+    
+    // Tower deletion tracking
+    private pointerDownTime: number = 0;
+    private pointerDownPosition: { x: number; y: number } | null = null;
+    private holdTimer: Phaser.Time.TimerEvent | null = null;
+    private towerQuery = defineQuery([Tower, Position, Renderable]);
 
     constructor() {
         super({ key: 'SandboxScene' });
@@ -47,6 +53,11 @@ export class SandboxScene extends Scene {
         this.createdPoints.forEach(point => point.destroy());
         this.createdPoints = [];
         
+        // Clean up hold timer if active
+        if (this.holdTimer) {
+            this.holdTimer.destroy();
+            this.holdTimer = null;
+        }
     }
 
     /**
@@ -82,8 +93,9 @@ export class SandboxScene extends Scene {
             fontStyle: 'bold'
         });
 
-        // Add click event listener for point creation
-        this.input.on('pointerdown', this.createPointAtClick, this);
+        // Add pointer event listeners for point creation and tower deletion
+        this.input.on('pointerdown', this.handlePointerDown, this);
+        this.input.on('pointerup', this.handlePointerUp, this);
 
         // Emit the current scene ready event
         EventBus.emit('current-scene-ready', this);
@@ -317,6 +329,121 @@ export class SandboxScene extends Scene {
                 color: '#ffffff'
             });
         });
+    }
+
+    /**
+     * Handle pointer down event - start tracking hold time
+     */
+    private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+        // Don't track if clicking on UI elements
+        if (this.isClickOnUI(pointer)) {
+            return;
+        }
+
+        // Store pointer down time and position
+        this.pointerDownTime = this.time.now;
+        this.pointerDownPosition = { x: pointer.x, y: pointer.y };
+
+        // Start timer for 1 second hold to delete tower
+        this.holdTimer = this.time.delayedCall(1000, () => {
+            this.deleteTowerAtPosition(pointer.x, pointer.y);
+            this.holdTimer = null;
+        });
+    }
+
+    /**
+     * Handle pointer up event - check if should create point or cancel deletion
+     */
+    private handlePointerUp(pointer: Phaser.Input.Pointer): void {
+        // Cancel hold timer if still active
+        if (this.holdTimer) {
+            this.holdTimer.destroy();
+            this.holdTimer = null;
+        }
+
+        // Don't process if clicking on UI elements
+        if (this.isClickOnUI(pointer)) {
+            this.pointerDownPosition = null;
+            return;
+        }
+
+        // Check if pointer moved significantly (more than 5 pixels)
+        if (this.pointerDownPosition) {
+            const dx = Math.abs(pointer.x - this.pointerDownPosition.x);
+            const dy = Math.abs(pointer.y - this.pointerDownPosition.y);
+            if (dx > 5 || dy > 5) {
+                this.pointerDownPosition = null;
+                return;
+            }
+        }
+
+        // If hold time was less than 100ms, create point
+        if (this.pointerDownTime > 0) {
+            const holdDuration = this.time.now - this.pointerDownTime;
+            if (holdDuration < 500) {
+                this.createPointAtClick(pointer);
+            }
+        }
+
+        // Reset tracking
+        this.pointerDownTime = 0;
+        this.pointerDownPosition = null;
+    }
+
+    /**
+     * Check if click is on UI elements (panel, buttons, etc.)
+     * Uses panel position and size directly to check if pointer is within panel container
+     * This automatically covers all UI elements since they are children of the panel container
+     */
+    private isClickOnUI(pointer: Phaser.Input.Pointer): boolean {
+        // Check if panel exists
+        if (!this.sandboxPanel) {
+            return false;
+        }
+
+        // Get panel position and size directly from container
+        // Container position is in world coordinates, so we can use it directly
+        const panelX = this.sandboxPanel.x;
+        const panelY = this.sandboxPanel.y;
+        const panelWidth = 400; // Panel width is fixed (defined in createSandboxPanel)
+        const panelHeight = this.scale.height; // Panel height matches scene height
+        
+        // Check if pointer is within panel bounds
+        // Since all UI elements (buttons, inputs, etc.) are children of the panel container,
+        // checking panel bounds covers all UI interactions
+        return pointer.x >= panelX && 
+               pointer.x <= panelX + panelWidth &&
+               pointer.y >= panelY && 
+               pointer.y <= panelY + panelHeight;
+    }
+
+    /**
+     * Find and delete tower at the specified position
+     */
+    private deleteTowerAtPosition(x: number, y: number): void {
+        if (!this.ecsWorld) {
+            return;
+        }
+
+        const towers = this.towerQuery(this.ecsWorld.world);
+        const towerSize = 30; // Tower size from createTower
+        const clickRadius = towerSize / 2; // Half of tower size for click detection
+
+        // Find tower at click position
+        for (const towerEid of towers) {
+            const towerX = Position.x[towerEid];
+            const towerY = Position.y[towerEid];
+            
+            // Calculate distance from click to tower center
+            const distance = Math.hypot(x - towerX, y - towerY);
+            
+            if (distance <= clickRadius) {
+                // Found tower at this position, delete it
+                console.log(`Deleting tower ${towerEid} at (${towerX}, ${towerY})`);
+                this.ecsWorld.destroyEntity(towerEid);
+                return;
+            }
+        }
     }
 
     /**
