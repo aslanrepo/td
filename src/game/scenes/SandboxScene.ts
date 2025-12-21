@@ -5,6 +5,7 @@ import { GameWorld } from '../ecs';
 import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target, Firing, NO_TARGET, Health } from '../ecs';
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 import { EventBus } from '../EventBus';
+import { entityConfig, TowerType, EnemyType } from '../config/entityConfig';
 
 /**
  * Sandbox Scene - Development and testing environment
@@ -205,18 +206,24 @@ export class SandboxScene extends Scene {
 
     /**
      * Spawn enemy entity with ECS components
+     * @param type - Enemy type string (e.g., 'basic')
      * @param options - Enemy configuration options
      * @param options.hp - Health points (default: 100)
      * @param options.speed - Movement speed in pixels per second (default: 100)
-     * @param options.lvl - Enemy level for color differentiation (default: 1)
      */
-    private spawnEnemy(options: { hp?: number; speed?: number; lvl?: number } = {}) {
+    private spawnEnemy(type: EnemyType = 'basic', options: { hp?: number; speed?: number } = {}) {
         const eid = this.ecsWorld.createEntity();
+
+        // Get visual properties from config
+        const enemyConfig = entityConfig.enemies[type];
+        if (!enemyConfig) {
+            console.error(`Unknown enemy type: ${type}`);
+            return;
+        }
 
         // Extract options with defaults
         const hp = options.hp ?? 100;
         const speed = options.speed ?? 100;
-        const lvl = options.lvl ?? 1;
 
         // Add components to entity
         addComponent(this.ecsWorld.world, Position, eid);
@@ -229,9 +236,12 @@ export class SandboxScene extends Scene {
         // Set component values
         Position.x[eid] = WAYPOINTS[0].x;  // Start at first waypoint
         Position.y[eid] = WAYPOINTS[0].y;
-        Renderable.type[eid] = 0;  // Enemy
-        Renderable.color[eid] = lvl === 1 ? 0xff0000 : 0x0000ff; // Red/blue
-        Renderable.size[eid] = 25; // Smaller size for better movement visualization
+        
+        // Set visual properties from config
+        Renderable.type[eid] = enemyConfig.renderType;
+        Renderable.color[eid] = enemyConfig.color;
+        Renderable.size[eid] = enemyConfig.size;
+        
         Velocity.speed[eid] = speed;
         PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
         
@@ -239,31 +249,35 @@ export class SandboxScene extends Scene {
         Health.maxHp[eid] = hp;
         Health.currentHp[eid] = hp;
 
-        console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]}) with ${hp} HP and speed ${speed}`);
+        console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]}) with type ${type}, ${hp} HP and speed ${speed}`);
     }
 
     /**
      * Create tower entity with ECS components
      * @param x - X coordinate for tower position
      * @param y - Y coordinate for tower position
+     * @param type - Tower type string (e.g., 'ball')
      * @param options - Tower configuration options
-     * @param options.towerType - Tower type: 0 = dart, 1 = cannon, 2 = ice (default: 0)
      * @param options.damage - Damage dealt by projectiles (default: 10)
-     * @param options.fireInterval - Fire interval in milliseconds (default: based on tower type)
+     * @param options.fireInterval - Fire interval in milliseconds (default: 1000)
      * @param options.projectileSpeed - Projectile speed in pixels per second (default: 1500)
-     * @param options.range - Attack range in pixels (default: based on tower type)
+     * @param options.range - Attack range in pixels (default: 100)
      */
-    private createTower(x: number, y: number, options: { towerType?: number; damage?: number; fireInterval?: number; projectileSpeed?: number; range?: number } = {}) {
+    private createTower(x: number, y: number, type: TowerType, options: { damage?: number; fireInterval?: number; projectileSpeed?: number; range?: number } = {}) {
         const eid = this.ecsWorld.createEntity();
 
+        // Get visual properties from config
+        const towerConfig = entityConfig.towers[type];
+        if (!towerConfig) {
+            console.error(`Unknown tower type: ${type}`);
+            return;
+        }
+
         // Extract options with defaults
-        const towerType = options.towerType ?? 0;
         const damage = options.damage ?? 10;
         const projectileSpeed = options.projectileSpeed ?? 1500;
-        
-        const fireInterval = options.fireInterval ?? 1000
-        
-        const range = options.range ?? 100
+        const fireInterval = options.fireInterval ?? 1000;
+        const range = options.range ?? 100;
 
         // Add components to entity
         addComponent(this.ecsWorld.world, Position, eid);
@@ -276,7 +290,7 @@ export class SandboxScene extends Scene {
         // Set component values
         Position.x[eid] = x;
         Position.y[eid] = y;
-        Tower.type[eid] = towerType;
+        Tower.type[eid] = 0; // Keep numeric type for backward compatibility with existing systems
         Tower.damage[eid] = damage;
         Tower.projectileSpeed[eid] = projectileSpeed;
         
@@ -289,12 +303,12 @@ export class SandboxScene extends Scene {
         Firing.fireInterval[eid] = fireInterval;
         Firing.lastShotTime[eid] = 0; // Can fire immediately
         
-        // Set visual properties
-        Renderable.type[eid] = 1; // Tower type for rendering
-        Renderable.color[eid] = towerType === 0 ? 0x00ff00 : towerType === 1 ? 0xff8800 : 0x0088ff; // Green/Orange/Blue
-        Renderable.size[eid] = 30; // Tower size
+        // Set visual properties from config
+        Renderable.type[eid] = towerConfig.renderType;
+        Renderable.color[eid] = towerConfig.color;
+        Renderable.size[eid] = towerConfig.size;
 
-        console.log(`Created tower ${eid} at (${x}, ${y}) with type ${towerType}, damage ${damage}, fireInterval ${fireInterval}ms, projectileSpeed ${projectileSpeed}, range ${range}`);
+        console.log(`Created tower ${eid} at (${x}, ${y}) with type ${type}, damage ${damage}, fireInterval ${fireInterval}ms, projectileSpeed ${projectileSpeed}, range ${range}`);
     }
 
     /**
@@ -426,13 +440,15 @@ export class SandboxScene extends Scene {
         }
 
         const towers = this.towerQuery(this.ecsWorld.world);
-        const towerSize = 30; // Tower size from createTower
-        const clickRadius = towerSize / 2; // Half of tower size for click detection
 
         // Find tower at click position
         for (const towerEid of towers) {
             const towerX = Position.x[towerEid];
             const towerY = Position.y[towerEid];
+            
+            // Get tower size from Renderable component (set from config)
+            const towerSize = Renderable.size[towerEid];
+            const clickRadius = towerSize / 2; // Half of tower size for click detection
             
             // Calculate distance from click to tower center
             const distance = Math.hypot(x - towerX, y - towerY);
@@ -828,10 +844,9 @@ export class SandboxScene extends Scene {
         buttonContainer.on('pointerdown', () => {
             const stats = this.getEnemyStatsFromInputs();
             if (stats) {
-                this.spawnEnemy({
+                this.spawnEnemy('basic', {
                     hp: stats.hp,
-                    speed: stats.speed,
-                    lvl: 1
+                    speed: stats.speed
                 });
             }
         });
@@ -941,8 +956,7 @@ export class SandboxScene extends Scene {
                     
                     if (stats) {
                         // Create tower at drop position
-                        this.createTower(pointer.x, pointer.y, {
-                            towerType: 0,
+                        this.createTower(pointer.x, pointer.y, 'ball', {
                             damage: stats.damage,
                             fireInterval: stats.fireInterval,
                             projectileSpeed: stats.projectileSpeed,

@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 
 import { Position, Target, Firing, Projectile, Renderable, Tower, Enemy, NO_TARGET, Direction } from '../components';
 import { GameWorld } from '../World';
+import { entityConfig, ProjectileType } from '../../config/entityConfig';
 
 /**
  * Default projectile speed (fallback if tower doesn't have projectileSpeed set)
@@ -23,10 +24,9 @@ const DEFAULT_PROJECTILE_DAMAGE = 10;
 const DEFAULT_PROJECTILE_LIFETIME = 5000; // 5 seconds
 
 /**
- * Renderable type for projectiles
- * Using type 2 to distinguish from enemies (0) and towers (1)
+ * Default projectile type for visual configuration
  */
-const PROJECTILE_RENDER_TYPE = 2;
+const DEFAULT_PROJECTILE_TYPE: ProjectileType = 'basic';
 
 /**
  * FiringSystemManager handles shooting logic for towers
@@ -165,9 +165,19 @@ class FiringSystemManager {
 
       // Add Renderable component for visualization
       addComponent(world, Renderable, projectileEid);
-      Renderable.type[projectileEid] = PROJECTILE_RENDER_TYPE;
-      Renderable.color[projectileEid] = 0xffff00; // Yellow color for projectiles
-      Renderable.size[projectileEid] = 10; // Small size for projectiles
+      
+      // Get visual properties from config
+      const projectileConfig = entityConfig.projectiles[DEFAULT_PROJECTILE_TYPE];
+      if (projectileConfig) {
+        Renderable.type[projectileEid] = projectileConfig.renderType;
+        Renderable.color[projectileEid] = projectileConfig.color;
+        Renderable.size[projectileEid] = projectileConfig.size;
+      } else {
+        // Fallback if config is missing
+        Renderable.type[projectileEid] = 2;
+        Renderable.color[projectileEid] = 0xffff00;
+        Renderable.size[projectileEid] = 10;
+      }
 
       // Step 6: Update tower's last shot time
       Firing.lastShotTime[towerEid] = currentTime;
