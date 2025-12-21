@@ -5,11 +5,16 @@ import { Position, Target, Firing, Projectile, Renderable, Tower, Enemy, NO_TARG
 import { GameWorld } from '../World';
 
 /**
- * Constant projectile speed
+ * Default projectile speed (fallback if tower doesn't have projectileSpeed set)
  * This ensures projectiles move in a straight line at constant speed
  * Speed is set to be visible but fast enough to hit moving targets
  */
-const PROJECTILE_SPEED = 1500; // pixels per second (visible but fast enough to hit moving targets)
+const DEFAULT_PROJECTILE_SPEED = 1500; // pixels per second
+
+/**
+ * Default projectile damage (fallback if tower doesn't have damage set)
+ */
+const DEFAULT_PROJECTILE_DAMAGE = 10;
 
 /**
  * Default projectile lifetime in milliseconds
@@ -123,10 +128,15 @@ class FiringSystemManager {
       const dirX = dx / distance;
       const dirY = dy / distance;
 
+      // Get tower-specific projectile speed and damage
+      // Use defaults if values are 0 or undefined (fallback for backward compatibility)
+      const towerProjectileSpeed = Tower.projectileSpeed[towerEid] || DEFAULT_PROJECTILE_SPEED;
+      const towerDamage = Tower.damage[towerEid] || DEFAULT_PROJECTILE_DAMAGE;
+
       // Calculate velocity vector (direction * speed)
       // Convert speed from pixels/second to pixels/millisecond for consistency
-      const velocityX = dirX * PROJECTILE_SPEED / 1000;
-      const velocityY = dirY * PROJECTILE_SPEED / 1000;
+      const velocityX = dirX * towerProjectileSpeed / 1000;
+      const velocityY = dirY * towerProjectileSpeed / 1000;
 
       // Step 5: Create projectile entity
       const gameWorld = this.scene.registry.get('gameWorld') as GameWorld;
@@ -149,10 +159,7 @@ class FiringSystemManager {
 
       // Add Projectile component
       addComponent(world, Projectile, projectileEid);
-      // Get damage from tower (assuming Tower has damage, or we need to add it)
-      // For now, let's use a default or get from Range or create Damage component
-      // Actually, towers don't have damage yet. Let me use a default for now.
-      Projectile.damage[projectileEid] = 10; // Default damage, can be configured per tower type
+      Projectile.damage[projectileEid] = towerDamage;
       Projectile.lifetime[projectileEid] = DEFAULT_PROJECTILE_LIFETIME;
       Projectile.spawnTime[projectileEid] = currentTime;
 
