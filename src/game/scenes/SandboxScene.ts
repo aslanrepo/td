@@ -74,8 +74,6 @@ export class SandboxScene extends Scene {
         // Create sandbox HUD panel
         this.createSandboxPanel();
 
-        this.createBackButton(this.scale.width, this.scale.height);
-
         // Создаём текстовую метку для координат
         this.coordsLabel = this.add.text(1060, 1060, '(x, y)', {
             fontSize: '16px',
@@ -93,15 +91,13 @@ export class SandboxScene extends Scene {
 
     /**
      * Create back button to return to menu
+     * @param buttonX - X position relative to panel container
+     * @param buttonY - Y position relative to panel container
+     * @returns Container with back button
      */
-    private createBackButton(width: number, height: number): void {
-        console.log('=== CREATING BACK BUTTON ===');
-        console.log('Button position:', width / 2, height / 2 + 100);
-
+    private createBackButton(buttonX: number, buttonY: number): Phaser.GameObjects.Container {
         const buttonWidth = 150;
         const buttonHeight = 50;
-        const buttonX = width / 2;
-        const buttonY = height / 2 + 100;
 
         // Create button using Container for better event handling
         const buttonContainer = this.add.container(buttonX, buttonY);
@@ -128,7 +124,7 @@ export class SandboxScene extends Scene {
         );
 
         // Create button text
-        const buttonText = this.add.text(0, 0, 'BACK2 TO MENU', {
+        const buttonText = this.add.text(0, 0, 'BACK TO MENU', {
             fontSize: '16px',
             fontFamily: 'Arial, sans-serif',
             color: '#ffffff',
@@ -144,21 +140,10 @@ export class SandboxScene extends Scene {
             new Phaser.Geom.Rectangle(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight),
             Phaser.Geom.Rectangle.Contains
         );
-        console.log('Button container created and set as interactive with hit area');
 
-        // Add multiple event listeners for debugging
-        buttonContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            console.log('Button clicked! pointerdown event triggered at:', pointer.x, pointer.y);
+        // Add click handler
+        buttonContainer.on('pointerdown', () => {
             this.scene.start('MenuScene');
-        });
-
-        buttonContainer.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-            console.log('Button pointerup event triggered at:', pointer.x, pointer.y);
-        });
-
-        // Add click event as alternative
-        buttonContainer.on('click', (pointer: Phaser.Input.Pointer) => {
-            console.log('Button click event triggered at:', pointer.x, pointer.y);
         });
 
         buttonContainer.on('pointerover', () => {
@@ -203,16 +188,7 @@ export class SandboxScene extends Scene {
             buttonText.setColor('#ffffff');
         });
 
-        // Add button animation
-        this.tweens.add({
-            targets: buttonContainer,
-            scaleX: 1.05,
-            scaleY: 1.05,
-            duration: 1000,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
+        return buttonContainer;
     }
 
     /**
@@ -463,7 +439,7 @@ export class SandboxScene extends Scene {
         const labelHeight = 20; // Height for label text
         const inputHeight = 25; // Input height
         const gapBetweenLabelAndInput = 5; // Gap between label and input
-        const gapBetweenPairs = 20; // Gap between label+input pairs
+        const gapBetweenPairs = 25; // Gap between label+input pairs
         const pairHeight = labelHeight + gapBetweenLabelAndInput + inputHeight; // Total height of one label+input pair
         const inputWidth = panelWidth - (padding * 2); // Input width
 
@@ -553,6 +529,10 @@ export class SandboxScene extends Scene {
         const buttonY = enemyInputStartY + (enemyStatsLabels.length * (pairHeight + gapBetweenPairs)) + 20;
         const spawnButton = this.createEnemySpawnButton(panelWidth / 2, buttonY);
 
+        // Create back button at the bottom of the panel
+        const backButtonY = panelHeight - 60; // 60px from bottom (50px button height + 10px padding)
+        const backButton = this.createBackButton(panelWidth / 2, backButtonY);
+
         // Add all elements to container
         panelContainer.add([
             panelBg, 
@@ -564,7 +544,8 @@ export class SandboxScene extends Scene {
             enemySeparatorLine,
             enemiesLabel,
             ...enemyStatsInputs.map(item => item.label),
-            spawnButton
+            spawnButton,
+            backButton
         ]);
 
         // Set depth to ensure panel is on top
