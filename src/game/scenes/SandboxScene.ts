@@ -47,17 +47,6 @@ export class SandboxScene extends Scene {
         this.createdPoints.forEach(point => point.destroy());
         this.createdPoints = [];
         
-        // Clean up DOM input elements
-        if (this.sandboxPanel) {
-            const towerStatsInputs = this.sandboxPanel.getData('towerStatsInputs') as { label: Phaser.GameObjects.Text; input: Phaser.GameObjects.DOMElement }[] | undefined;
-            if (towerStatsInputs) {
-                towerStatsInputs.forEach(item => {
-                    if (item.input) {
-                        item.input.destroy();
-                    }
-                });
-            }
-        }
     }
 
     /**
@@ -84,11 +73,6 @@ export class SandboxScene extends Scene {
 
         // Create sandbox HUD panel
         this.createSandboxPanel();
-
-        // Spawn multiple test enemies
-        for (let i = 0; i < 1; i++) {
-            this.spawnEnemy({ lvl: 1 });
-        }
 
         this.createBackButton(this.scale.width, this.scale.height);
 
@@ -515,8 +499,73 @@ export class SandboxScene extends Scene {
         // Store inputs for later access
         this.sandboxPanel.setData('towerStatsInputs', towerStatsInputs);
 
+        // Calculate position for enemy section (below tower inputs)
+        const lastTowerInputIndex = statsLabels.length - 1;
+        const lastTowerInputY = inputStartY + (lastTowerInputIndex * (pairHeight + gapBetweenPairs)) + labelHeight + gapBetweenLabelAndInput + inputHeight;
+        const enemySectionStartY = lastTowerInputY + 30; // Spacing after tower inputs
+
+        // Add separator line before enemy section
+        const enemySeparatorLine = this.add.graphics();
+        enemySeparatorLine.lineStyle(1, 0x666666);
+        enemySeparatorLine.lineBetween(20, enemySectionStartY, panelWidth - 20, enemySectionStartY);
+
+        // Add "Enemies" label
+        const enemiesLabel = this.add.text(panelWidth / 2, enemySectionStartY + 20, 'Enemies', {
+            fontSize: '18px',
+            fontFamily: 'Arial, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        enemiesLabel.setOrigin(0.5);
+
+        // Create input fields for enemy stats
+        const enemyStatsInputs: { label: Phaser.GameObjects.Text; input: Phaser.GameObjects.DOMElement }[] = [];
+        const enemyStatsLabels = ['HP', 'Speed'];
+        const enemyDefaultValues = ['100', '100'];
+        const enemyInputStartY = enemySectionStartY + 50; // Start after label
+
+        enemyStatsLabels.forEach((label, index) => {
+            const labelY = enemyInputStartY + (index * (pairHeight + gapBetweenPairs));
+            const inputY = labelY + labelHeight + gapBetweenLabelAndInput;
+            
+            // Create label
+            const labelText = this.add.text(padding, labelY, label + ':', {
+                fontSize: '14px',
+                fontFamily: 'Arial, sans-serif',
+                color: '#ffffff'
+            });
+
+            // Create DOM input element
+            const inputStyle = `width: ${inputWidth}px; height: ${inputHeight}px; background-color: #1a1a1a; color: #ffffff; border: 1px solid #666666; border-radius: 3px; padding: 5px; font-size: 14px; font-family: Arial, sans-serif;`;
+            const inputHTML = `<input type="number" value="${enemyDefaultValues[index]}" style="${inputStyle}" />`;
+            
+            const inputDOMElement = this.add.dom(panelX + padding, panelY + inputY).createFromHTML(inputHTML);
+            inputDOMElement.setOrigin(0, 0);
+            inputDOMElement.setDepth(1001);
+
+            enemyStatsInputs.push({ label: labelText, input: inputDOMElement });
+        });
+
+        // Store enemy inputs for later access
+        this.sandboxPanel.setData('enemyStatsInputs', enemyStatsInputs);
+
+        // Create spawn enemy button
+        const buttonY = enemyInputStartY + (enemyStatsLabels.length * (pairHeight + gapBetweenPairs)) + 20;
+        const spawnButton = this.createEnemySpawnButton(panelWidth / 2, buttonY);
+
         // Add all elements to container
-        panelContainer.add([panelBg, titleText, separatorLine, towersLabel, gridGraphics, ...towerStatsInputs.map(item => item.label)]);
+        panelContainer.add([
+            panelBg, 
+            titleText, 
+            separatorLine, 
+            towersLabel, 
+            gridGraphics, 
+            ...towerStatsInputs.map(item => item.label),
+            enemySeparatorLine,
+            enemiesLabel,
+            ...enemyStatsInputs.map(item => item.label),
+            spawnButton
+        ]);
 
         // Set depth to ensure panel is on top
         panelContainer.setDepth(1000);
@@ -525,6 +574,49 @@ export class SandboxScene extends Scene {
         panelContainer.sort('depth');
 
         console.log(`Created sandbox panel at (${panelX}, ${panelY}) with size ${panelWidth}x${panelHeight}`);
+    }
+
+    /**
+     * Get enemy stats from input fields
+     * @returns Object with enemy stats values
+     */
+    private getEnemyStatsFromInputs(): { hp: number; speed: number } | null {
+        const enemyStatsInputs = this.sandboxPanel.getData('enemyStatsInputs') as { 
+            label: Phaser.GameObjects.Text; 
+            input: Phaser.GameObjects.DOMElement 
+        }[] | undefined;
+
+        if (!enemyStatsInputs) {
+            console.warn('Enemy stats inputs not found');
+            return null;
+        }
+
+        const defaults = [100, 100];
+        const statNames = ['hp', 'speed'];
+        const rawValues: string[] = [];
+        const parsedValues: number[] = [];
+
+        // Process all inputs
+        enemyStatsInputs.forEach((item, index) => {
+            const node = item.input.node;
+            const inputElement = node?.tagName === 'INPUT' 
+                ? node as HTMLInputElement 
+                : node?.querySelector('input[type="number"]') as HTMLInputElement;
+            
+            const rawValue = inputElement?.value || '';
+            const parsedValue = parseFloat(rawValue) || defaults[index];
+            
+            rawValues.push(rawValue);
+            parsedValues.push(parsedValue);
+        });
+
+        // Log raw values
+        console.log(`Reading enemy stats from inputs (raw): ${statNames.map((name, i) => `${name}="${rawValues[i]}"`).join(', ')}`);
+
+        return {
+            hp: parsedValues[0],
+            speed: parsedValues[1]
+        };
     }
 
     /**
@@ -570,6 +662,116 @@ export class SandboxScene extends Scene {
             projectileSpeed: parsedValues[2],
             range: parsedValues[3]
         };
+    }
+
+    /**
+     * Create spawn enemy button
+     * @param buttonX - X position relative to panel container
+     * @param buttonY - Y position relative to panel container
+     * @returns Container with spawn button
+     */
+    private createEnemySpawnButton(buttonX: number, buttonY: number): Phaser.GameObjects.Container {
+        const buttonWidth = 200;
+        const buttonHeight = 40;
+
+        // Create button container (position relative to panel container)
+        const buttonContainer = this.add.container(buttonX, buttonY);
+
+        // Create button background
+        const buttonBg = this.add.graphics();
+        buttonBg.fillStyle(this.hexToNumber('#3390EC'));
+        buttonBg.fillRoundedRect(
+            -buttonWidth / 2,
+            -buttonHeight / 2,
+            buttonWidth,
+            buttonHeight,
+            8
+        );
+
+        // Add button border
+        buttonBg.lineStyle(2, 0xffffff);
+        buttonBg.strokeRoundedRect(
+            -buttonWidth / 2,
+            -buttonHeight / 2,
+            buttonWidth,
+            buttonHeight,
+            8
+        );
+
+        // Create button text
+        const buttonText = this.add.text(0, 0, 'Spawn Enemy', {
+            fontSize: '16px',
+            fontFamily: 'Arial, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        buttonText.setOrigin(0.5);
+
+        // Add both to container
+        buttonContainer.add([buttonBg, buttonText]);
+
+        // Make container interactive
+        buttonContainer.setInteractive(
+            new Phaser.Geom.Rectangle(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight),
+            Phaser.Geom.Rectangle.Contains
+        );
+
+        // Add click handler
+        buttonContainer.on('pointerdown', () => {
+            const stats = this.getEnemyStatsFromInputs();
+            if (stats) {
+                this.spawnEnemy({
+                    hp: stats.hp,
+                    speed: stats.speed,
+                    lvl: 1
+                });
+            }
+        });
+
+        // Add hover effects
+        buttonContainer.on('pointerover', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(0xffffff);
+            buttonBg.fillRoundedRect(
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
+                8
+            );
+            buttonBg.lineStyle(2, this.hexToNumber('#3390EC'));
+            buttonBg.strokeRoundedRect(
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
+                8
+            );
+            buttonText.setColor('#3390EC');
+        });
+
+        buttonContainer.on('pointerout', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(this.hexToNumber('#3390EC'));
+            buttonBg.fillRoundedRect(
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
+                8
+            );
+            buttonBg.lineStyle(2, 0xffffff);
+            buttonBg.strokeRoundedRect(
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
+                8
+            );
+            buttonText.setColor('#ffffff');
+        });
+
+        return buttonContainer;
     }
 
     /**
