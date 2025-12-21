@@ -520,6 +520,9 @@ export class SandboxScene extends Scene {
 
         // Set depth to ensure panel is on top
         panelContainer.setDepth(1000);
+        
+        // Sort container children by depth so elements with higher depth render on top
+        panelContainer.sort('depth');
 
         console.log(`Created sandbox panel at (${panelX}, ${panelY}) with size ${panelWidth}x${panelHeight}`);
     }
@@ -589,7 +592,7 @@ export class SandboxScene extends Scene {
         
         // Make container interactive and draggable
         iconContainer.setInteractive(new Phaser.Geom.Rectangle(-iconSize / 2, -iconSize / 2, iconSize, iconSize), Phaser.Geom.Rectangle.Contains);
-        iconContainer.setDepth(1002); // Above panel
+        iconContainer.setDepth(2000); // High depth to be above panel elements
 
         // Store original position (relative to panel container)
         const originalX = squareX + cellSize / 2;
@@ -601,9 +604,8 @@ export class SandboxScene extends Scene {
         const panelY = 0;
 
         // Drag and drop handlers
-        iconContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        iconContainer.on('pointerdown', () => {
             this.isDraggingTower = true;
-            iconContainer.setDepth(1003); // Bring to front while dragging
         });
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -642,7 +644,6 @@ export class SandboxScene extends Scene {
                 // Return icon to original position
                 if (this.towerIcon) {
                     this.towerIcon.setPosition(originalX, originalY);
-                    this.towerIcon.setDepth(1002);
                 }
             }
         });
