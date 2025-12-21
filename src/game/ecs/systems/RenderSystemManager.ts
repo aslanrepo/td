@@ -1,7 +1,7 @@
 import { defineSystem, defineQuery, enterQuery, exitQuery, IWorld } from 'bitecs';
 import Phaser from 'phaser';
 
-import { Position, Renderable } from '../components';
+import { Position, Renderable, Tower, Range } from '../components';
 
 /**
  * SimpleRenderSystemManager handles sprite creation, updates, and cleanup for ECS entities
@@ -10,6 +10,7 @@ import { Position, Renderable } from '../components';
  */
 class SimpleRenderSystemManager {
   private spriteMap = new Map<number, Phaser.GameObjects.GameObject>();
+  private rangeRingMap = new Map<number, Phaser.GameObjects.Arc>();
   private scene: Phaser.Scene | null = null;
   private initialized = false;
   
@@ -21,6 +22,9 @@ class SimpleRenderSystemManager {
   private readonly entityQuery = defineQuery([Position, Renderable]);
   private readonly enterQ = enterQuery(this.entityQuery);
   private readonly exitQ = exitQuery(this.entityQuery);
+  
+  // Query for towers with range (to create/update range rings)
+  private readonly towerQuery = defineQuery([Position, Renderable, Tower, Range]);
 
   /**
    * Initialize the render system for a specific scene
@@ -58,6 +62,15 @@ class SimpleRenderSystemManager {
       }
     });
     this.spriteMap.clear();
+    
+    // Destroy all range rings
+    this.rangeRingMap.forEach(ring => {
+      if (ring.scene) { // Check that ring still exists
+        ring.destroy();
+      }
+    });
+    this.rangeRingMap.clear();
+    
     this.initialized = false;
     this.scene = null;
   }
@@ -109,6 +122,9 @@ class SimpleRenderSystemManager {
     // Update positions of existing entities
     this.updateExistingEntities(entities, newSet);
     
+    // Update range rings for towers
+    this.updateRangeRings(world);
+    
     // Clean up removed entities
     this.handleRemovedEntities(removedEntities);
 
@@ -144,6 +160,33 @@ class SimpleRenderSystemManager {
     // Configure additional properties (depth, stroke, position, etc.)
     this.configureSprite(sprite, type, x, y);
     this.spriteMap.set(eid, sprite);
+    
+    // Create range ring for towers
+    if (type === this.TOWER_TYPE) {
+      this.createRangeRing(eid);
+    }
+  }
+  
+  /**
+   * Create a range ring visualization for a tower
+   * @param eid - Entity ID of the tower
+   */
+  private createRangeRing(eid: number) {
+    if (!this.scene) return;
+    
+    // Check if tower has Range component and valid range value
+    if (!Range.value || Range.value[eid] === undefined || Range.value[eid] <= 0) return;
+    
+    const x = Position.x[eid];
+    const y = Position.y[eid];
+    const range = Range.value[eid];
+    
+    // Create a circle to represent the range (no fill, only stroke)
+    const ring = this.scene.add.circle(x, y, range, 0xffffff, 0); // No fill
+    ring.setStrokeStyle(2, 0xffffff, 0.3); // White stroke with 30% opacity
+    ring.setDepth(0); // Render behind everything
+    
+    this.rangeRingMap.set(eid, ring);
   }
 
   /**
@@ -201,6 +244,30 @@ class SimpleRenderSystemManager {
         const y = Position.y[eid];
         (sprite as Phaser.GameObjects.Shape).setPosition(x, y);
       }
+      
+      // Update range ring position if it exists
+      const ring = this.rangeRingMap.get(eid);
+      if (ring) {
+        const x = Position.x[eid];
+        const y = Position.y[eid];
+        ring.setPosition(x, y);
+      }
+    }
+  }
+  
+  /**
+   * Update range rings for all towers
+   * Ensures range rings are created for towers that don't have them yet
+   * @param world - ECS world instance
+   */
+  private updateRangeRings(world: IWorld) {
+    const towers = this.towerQuery(world);
+    
+    for (const eid of towers) {
+      // Create range ring if it doesn't exist
+      if (!this.rangeRingMap.has(eid)) {
+        this.createRangeRing(eid);
+      }
     }
   }
 
@@ -214,6 +281,13 @@ class SimpleRenderSystemManager {
       if (sprite) {
         sprite.destroy();
         this.spriteMap.delete(eid);
+      }
+      
+      // Clean up range ring if it exists
+      const ring = this.rangeRingMap.get(eid);
+      if (ring) {
+        ring.destroy();
+        this.rangeRingMap.delete(eid);
       }
     }
   }
