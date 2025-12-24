@@ -1,4 +1,4 @@
-import { WEBGL, Game } from 'phaser';
+import Phaser, { WEBGL, Game } from 'phaser';
 
 import { MenuScene } from './scenes/MenuScene';
 import { SandboxScene } from './scenes/SandboxScene';

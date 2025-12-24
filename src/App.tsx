@@ -9,21 +9,21 @@ function App()
     const phaserRef = useRef<IRefPhaserGame | null>(null);
 
     const startSandbox = () => {
-
-        if(phaserRef.current)
-        {     
-            const scene = phaserRef.current.scene as MenuScene;
+        if(phaserRef.current?.game) {
+            const game = phaserRef.current.game;
+            const activeScene = game.scene.getScenes(true)[0];
             
-            if (scene)
-            {
-                scene.startSandbox();
+            if (activeScene?.scene?.key === 'MenuScene' && 'startSandbox' in activeScene) {
+                (activeScene as MenuScene).startSandbox();
+            } else {
+                game.scene.start('SandboxScene');
             }
         }
     }
 
     // Event emitted from the PhaserGame component
     const currentScene = () => {
-        console.log('current scene was invoked');
+        // Scene ready callback
     }
 
     return (

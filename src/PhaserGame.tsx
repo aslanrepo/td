@@ -22,17 +22,26 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(function PhaserGame
     {
         if (game.current === null)
         {
+            try {
+                // Check if Phaser is available
+                if (typeof Phaser === 'undefined') {
+                    console.error('Phaser is not loaded! Check if phaser module is properly imported.');
+                    return;
+                }
 
-            game.current = StartGame("game-container");
+                console.log('Initializing Phaser game...');
+                game.current = StartGame("game-container");
 
-            if (typeof ref === 'function')
-            {
-                ref({ game: game.current, scene: null });
-            } else if (ref)
-            {
-                ref.current = { game: game.current, scene: null };
+                if (typeof ref === 'function')
+                {
+                    ref({ game: game.current, scene: null });
+                } else if (ref)
+                {
+                    ref.current = { game: game.current, scene: null };
+                }
+            } catch (error) {
+                console.error('Error initializing Phaser game:', error);
             }
-
         }
 
         return () =>
