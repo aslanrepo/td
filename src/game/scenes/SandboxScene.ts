@@ -5,7 +5,7 @@ import { GameWorld } from '../ecs';
 import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target, Firing, NO_TARGET, Health } from '../ecs';
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 import { EventBus } from '../EventBus';
-import { entityConfig, TowerType, EnemyType } from '../config/entityConfig';
+import { entityVisualConfig, TowerType, EnemyType } from '../config/entityConfig';
 
 /**
  * Sandbox Scene - Development and testing environment
@@ -215,7 +215,7 @@ export class SandboxScene extends Scene {
         const eid = this.ecsWorld.createEntity();
 
         // Get visual properties from config
-        const enemyConfig = entityConfig.enemies[type];
+        const enemyConfig = entityVisualConfig.enemies[type];
         if (!enemyConfig) {
             console.error(`Unknown enemy type: ${type}`);
             return;
@@ -267,7 +267,7 @@ export class SandboxScene extends Scene {
         const eid = this.ecsWorld.createEntity();
 
         // Get visual properties from config
-        const towerConfig = entityConfig.towers[type];
+        const towerConfig = entityVisualConfig.towers[type];
         if (!towerConfig) {
             console.error(`Unknown tower type: ${type}`);
             return;

@@ -8,7 +8,7 @@
  * - 2: Projectile (rendered as circle)
  */
 
-export const entityConfig = {
+export const entityVisualConfig = {
   towers: {
     ball: { 
       size: 50, 
@@ -40,7 +40,7 @@ export const entityConfig = {
 } as const;
 
 // Type definitions for better TypeScript support
-export type TowerType = keyof typeof entityConfig.towers;
-export type EnemyType = keyof typeof entityConfig.enemies;
-export type ProjectileType = keyof typeof entityConfig.projectiles;
+export type TowerType = keyof typeof entityVisualConfig.towers;
+export type EnemyType = keyof typeof entityVisualConfig.enemies;
+export type ProjectileType = keyof typeof entityVisualConfig.projectiles;
 

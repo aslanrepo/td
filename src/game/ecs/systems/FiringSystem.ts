@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 
 import { Position, Target, Firing, Projectile, Renderable, Tower, Enemy, NO_TARGET, Direction } from '../components';
 import { GameWorld } from '../World';
-import { entityConfig, ProjectileType } from '../../config/entityConfig';
+import { entityVisualConfig, ProjectileType } from '../../config/entityConfig';
 
 /**
  * Default projectile speed (fallback if tower doesn't have projectileSpeed set)
@@ -167,7 +167,7 @@ class FiringSystemManager {
       addComponent(world, Renderable, projectileEid);
       
       // Get visual properties from config
-      const projectileConfig = entityConfig.projectiles[DEFAULT_PROJECTILE_TYPE];
+      const projectileConfig = entityVisualConfig.projectiles[DEFAULT_PROJECTILE_TYPE];
       if (projectileConfig) {
         Renderable.type[projectileEid] = projectileConfig.renderType;
         Renderable.color[projectileEid] = projectileConfig.color;
