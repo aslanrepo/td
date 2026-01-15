@@ -10,7 +10,7 @@
 
 export const entityVisualConfig = {
   towers: {
-    ball: { 
+    basic: { 
       size: 50, 
       color: 0x00ff00, // Green
       renderType: 1 // Tower type for rendering

@@ -1,0 +1,79 @@
+{
+  "enemies": {
+    "red": {
+      "size": 20,
+      "color": "0xff0000",
+      "renderType": 0
+    },
+    "blue": {
+      "size": 20,
+      "color": "0x0000ff",
+      "renderType": 0
+    },
+    "green": {
+      "size": 20,
+      "color": "0x00ff00",
+      "renderType": 0
+    },
+    "yellow": {
+      "size": 20,
+      "color": "0xffff00",
+      "renderType": 0
+    },
+    "pink": {
+      "size": 20,
+      "color": "0xff00ff",
+      "renderType": 0
+    },
+    "black": {
+      "size": 20,
+      "color": "0x000000",
+      "renderType": 0
+    },
+    "white": {
+      "size": 20,
+      "color": "0xffffff",
+      "renderType": 0
+    },
+    "lead": {
+      "size": 20,
+      "color": "0x808080",
+      "renderType": 0
+    },
+    "rainbow": {
+      "size": 25,
+      "color": "0xff00ff",
+      "renderType": 0
+    },
+    "ceramic": {
+      "size": 30,
+      "color": "0x9b7355",
+      "renderType": 0
+    },
+    "moab": {
+      "size": 80,
+      "color": "0x00ffff",
+      "renderType": 0
+    },
+    "bfb": {
+      "size": 120,
+      "color": "0xff00ff",
+      "renderType": 0
+    },
+    "zomg": {
+      "size": 160,
+      "color": "0x800000",
+      "renderType": 0
+    },
+    "ddt": {
+      "size": 60,
+      "color": "0x000000",
+      "renderType": 0
+    },
+    "bad": {
+      "size": 200,
+      "color": "0x00ff00",
+      "renderType": 0
+    }
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "enemies": [
+    {
+      "id": "red",
+      "class": "basic",
+      "hp": 1,
+      "speed": 1.0,
+      "immunities": [],
+      "properties": [],
+      "children": []
+    },
+    {
+      "id": "blue",
+      "class": "basic",
+      "hp": 2,
+      "speed": 1.4,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "red", "count": 1 }
+      ]
+    },
+    {
+      "id": "green",
+      "class": "basic",
+      "hp": 3,
+      "speed": 1.8,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "blue", "count": 1 }
+      ]
+    },
+    {
+      "id": "yellow",
+      "class": "basic",
+      "hp": 4,
+      "speed": 3.2,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "green", "count": 1 }
+      ]
+    },
+    {
+      "id": "pink",
+      "class": "basic",
+      "hp": 5,
+      "speed": 3.5,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "yellow", "count": 1 }
+      ]
+    },
+    {
+      "id": "black",
+      "class": "special",
+      "hp": 1,
+      "speed": 1.4,
+      "immunities": ["explosive"],
+      "properties": [],
+      "children": [
+        { "id": "pink", "count": 2 }
+      ]
+    },
+    {
+      "id": "white",
+      "class": "special",
+      "hp": 1,
+      "speed": 1.4,
+      "immunities": ["ice"],
+      "properties": [],
+      "children": [
+        { "id": "pink", "count": 2 }
+      ]
+    },
+    {
+      "id": "lead",
+      "class": "special",
+      "hp": 1,
+      "speed": 1.4,
+      "immunities": ["sharp", "piercing"],
+      "properties": [],
+      "children": [
+        { "id": "pink", "count": 2 }
+      ]
+    },
+    {
+      "id": "rainbow",
+      "class": "special",
+      "hp": 1,
+      "speed": 2.2,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "yellow", "count": 2 }
+      ]
+    },
+    {
+      "id": "ceramic",
+      "class": "special",
+      "hp": 10,
+      "speed": 3.2,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "pink", "count": 1 }
+      ]
+    },
+    {
+      "id": "moab",
+      "class": "moab",
+      "hp": 200,
+      "speed": 0.45,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "ceramic", "count": 4 }
+      ]
+    },
+    {
+      "id": "bfb",
+      "class": "moab",
+      "hp": 700,
+      "speed": 0.25,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "moab", "count": 4 }
+      ]
+    },
+    {
+      "id": "zomg",
+      "class": "moab",
+      "hp": 4000,
+      "speed": 0.18,
+      "immunities": [],
+      "properties": [],
+      "children": [
+        { "id": "bfb", "count": 4 }
+      ]
+    },
+    {
+      "id": "ddt",
+      "class": "special-moab",
+      "hp": 400,
+      "speed": 3.0,
+      "immunities": ["sharp", "piercing", "explosive"],
+      "properties": ["camo"],
+      "children": [
+        { "id": "ceramic", "count": 6 }
+      ]
+    },
+    {
+      "id": "bad",
+      "class": "special-moab",
+      "hp": 20000,
+      "speed": 0.12,
+      "immunities": ["explosive", "ice", "sharp", "piercing", "magic"],
+      "properties": [],
+      "children": [
+        { "id": "ddt", "count": 4 },
+        { "id": "ceramic", "count": 1 }
+      ]
+    }
+  ]
+}
