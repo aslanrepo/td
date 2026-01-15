@@ -6,6 +6,8 @@ import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Targ
 import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
 import { EventBus } from '../EventBus';
 import { entityVisualConfig, TowerType, EnemyType } from '../config/entityConfig';
+import { enemiesData, getEnemyById } from '../config/enemies';
+import { getEnemyVisualById } from '../config/enemies-visual';
 
 /**
  * Sandbox Scene - Development and testing environment
@@ -668,9 +670,19 @@ export class SandboxScene extends Scene {
         // Store enemy inputs for later access
         this.sandboxPanel.setData('enemyStatsInputs', enemyStatsInputs);
 
-        // Create spawn enemy button
+        // Create spawn custom enemy button
         const buttonY = enemyInputStartY + (enemyStatsLabels.length * (pairHeight + gapBetweenPairs)) + 20;
-        const spawnButton = this.createEnemySpawnButton(panelWidth / 2, buttonY);
+        const customSpawnButton = this.createCustomEnemySpawnButton(panelWidth / 2, buttonY);
+
+        // Create enemy dropdown below custom spawn button
+        const dropdownY = buttonY + 50; // 50px spacing after button
+        const dropdownWidth = panelWidth - (padding * 2);
+        const enemyDropdown = this.createEnemyDropdown(padding, dropdownY, panelX, panelY, dropdownWidth);
+        this.sandboxPanel.setData('enemyDropdown', enemyDropdown);
+
+        // Create spawn preset enemy button below dropdown
+        const presetButtonY = dropdownY + 60; // 40px spacing after dropdown
+        const presetSpawnButton = this.createPresetEnemySpawnButton(panelWidth / 2, presetButtonY);
 
         // Create back button at the bottom of the panel
         const backButtonY = panelHeight - 60; // 60px from bottom (50px button height + 10px padding)
@@ -687,7 +699,8 @@ export class SandboxScene extends Scene {
             enemySeparatorLine,
             enemiesLabel,
             ...enemyStatsInputs.map(item => item.label),
-            spawnButton,
+            customSpawnButton,
+            presetSpawnButton,
             backButton
         ]);
 
@@ -789,12 +802,12 @@ export class SandboxScene extends Scene {
     }
 
     /**
-     * Create spawn enemy button
+     * Create spawn custom enemy button
      * @param buttonX - X position relative to panel container
      * @param buttonY - Y position relative to panel container
      * @returns Container with spawn button
      */
-    private createEnemySpawnButton(buttonX: number, buttonY: number): Phaser.GameObjects.Container {
+    private createCustomEnemySpawnButton(buttonX: number, buttonY: number): Phaser.GameObjects.Container {
         const buttonWidth = 200;
         const buttonHeight = 40;
 
@@ -823,7 +836,7 @@ export class SandboxScene extends Scene {
         );
 
         // Create button text
-        const buttonText = this.add.text(0, 0, 'Spawn Enemy', {
+        const buttonText = this.add.text(0, 0, 'Spawn Custom Enemy', {
             fontSize: '16px',
             fontFamily: 'Arial, sans-serif',
             color: '#ffffff',
@@ -898,6 +911,204 @@ export class SandboxScene extends Scene {
     }
 
     /**
+     * Create enemy dropdown selector
+     * @param dropdownX - X position relative to panel container
+     * @param dropdownY - Y position relative to panel container
+     * @param panelX - Panel X position in scene coordinates
+     * @param panelY - Panel Y position in scene coordinates
+     * @param dropdownWidth - Width of the dropdown
+     * @returns DOMElement with select dropdown
+     */
+    private createEnemyDropdown(dropdownX: number, dropdownY: number, panelX: number, panelY: number, dropdownWidth: number): Phaser.GameObjects.DOMElement {
+        // Get all enemy IDs from config
+        const enemyIds = enemiesData.enemies.map(enemy => enemy.id);
+
+        // Create options HTML
+        const optionsHTML = enemyIds.map(id => `<option value="${id}">${id}</option>`).join('');
+
+        // Create select element HTML
+        const selectStyle = `width: ${dropdownWidth}px; height: 30px; background-color: #1a1a1a; color: #ffffff; border: 1px solid #666666; border-radius: 3px; padding: 5px; font-size: 14px; font-family: Arial, sans-serif;`;
+        const selectHTML = `<select style="${selectStyle}">${optionsHTML}</select>`;
+
+        // Create DOM element (position in scene coordinates)
+        const dropdownDOM = this.add.dom(panelX + dropdownX, panelY + dropdownY).createFromHTML(selectHTML);
+        dropdownDOM.setOrigin(0, 0);
+        dropdownDOM.setDepth(1001); // Above panel
+
+        return dropdownDOM;
+    }
+
+    /**
+     * Create spawn preset enemy button
+     * @param buttonX - X position relative to panel container
+     * @param buttonY - Y position relative to panel container
+     * @returns Container with spawn button
+     */
+    private createPresetEnemySpawnButton(buttonX: number, buttonY: number): Phaser.GameObjects.Container {
+        const buttonWidth = 200;
+        const buttonHeight = 40;
+
+        // Create button container (position relative to panel container)
+        const buttonContainer = this.add.container(buttonX, buttonY);
+
+        // Create button background
+        const buttonBg = this.add.graphics();
+        buttonBg.fillStyle(this.hexToNumber('#3390EC'));
+        buttonBg.fillRoundedRect(
+            -buttonWidth / 2,
+            -buttonHeight / 2,
+            buttonWidth,
+            buttonHeight,
+            8
+        );
+
+        // Add button border
+        buttonBg.lineStyle(2, 0xffffff);
+        buttonBg.strokeRoundedRect(
+            -buttonWidth / 2,
+            -buttonHeight / 2,
+            buttonWidth,
+            buttonHeight,
+            8
+        );
+
+        // Create button text
+        const buttonText = this.add.text(0, 0, 'Spawn Enemy', {
+            fontSize: '16px',
+            fontFamily: 'Arial, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        buttonText.setOrigin(0.5);
+
+        // Add both to container
+        buttonContainer.add([buttonBg, buttonText]);
+
+        // Make container interactive
+        buttonContainer.setInteractive(
+            new Phaser.Geom.Rectangle(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight),
+            Phaser.Geom.Rectangle.Contains
+        );
+
+        // Add click handler
+        buttonContainer.on('pointerdown', () => {
+            const enemyDropdown = this.sandboxPanel.getData('enemyDropdown') as Phaser.GameObjects.DOMElement | undefined;
+            if (!enemyDropdown) {
+                console.warn('Enemy dropdown not found');
+                return;
+            }
+
+            const node = enemyDropdown.node;
+            const selectElement = node?.tagName === 'SELECT'
+                ? node as HTMLSelectElement
+                : node?.querySelector('select') as HTMLSelectElement;
+
+            const selectedEnemyId = selectElement?.value;
+            if (selectedEnemyId) {
+                this.spawnPresetEnemy(selectedEnemyId);
+            } else {
+                console.warn('No enemy selected');
+            }
+        });
+
+        // Add hover effects
+        buttonContainer.on('pointerover', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(0xffffff);
+            buttonBg.fillRoundedRect(
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
+                8
+            );
+            buttonBg.lineStyle(2, this.hexToNumber('#3390EC'));
+            buttonBg.strokeRoundedRect(
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
+                8
+            );
+            buttonText.setColor('#3390EC');
+        });
+
+        buttonContainer.on('pointerout', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(this.hexToNumber('#3390EC'));
+            buttonBg.fillRoundedRect(
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
+                8
+            );
+            buttonBg.lineStyle(2, 0xffffff);
+            buttonBg.strokeRoundedRect(
+                -buttonWidth / 2,
+                -buttonHeight / 2,
+                buttonWidth,
+                buttonHeight,
+                8
+            );
+            buttonText.setColor('#ffffff');
+        });
+
+        return buttonContainer;
+    }
+
+    /**
+     * Spawn enemy with preset configuration from config files
+     * @param enemyId - Enemy ID from enemies.json (e.g., 'red', 'blue', 'moab')
+     */
+    private spawnPresetEnemy(enemyId: string): void {
+        // Get enemy configuration
+        const enemyConfig = getEnemyById(enemyId);
+        if (!enemyConfig) {
+            console.error(`Enemy config not found for ID: ${enemyId}`);
+            return;
+        }
+
+        // Get visual configuration
+        const visualConfig = getEnemyVisualById(enemyId);
+        if (!visualConfig) {
+            console.error(`Enemy visual config not found for ID: ${enemyId}`);
+            return;
+        }
+
+        const eid = this.ecsWorld.createEntity();
+
+        // Add components to entity
+        addComponent(this.ecsWorld.world, Position, eid);
+        addComponent(this.ecsWorld.world, Renderable, eid);
+        addComponent(this.ecsWorld.world, Velocity, eid);
+        addComponent(this.ecsWorld.world, PathProgress, eid);
+        addComponent(this.ecsWorld.world, Enemy, eid);
+        addComponent(this.ecsWorld.world, Health, eid);
+
+        // Set component values
+        Position.x[eid] = WAYPOINTS[0].x;  // Start at first waypoint
+        Position.y[eid] = WAYPOINTS[0].y;
+
+        // Set visual properties from visual config
+        Renderable.type[eid] = visualConfig.renderType;
+        Renderable.color[eid] = visualConfig.color;
+        Renderable.size[eid] = visualConfig.size;
+
+        // Set speed from enemy config (convert to pixels per second if needed)
+        // Speed in config is relative, so we multiply by a base speed
+        const baseSpeed = 100; // Base speed in pixels per second
+        Velocity.speed[eid] = enemyConfig.speed * baseSpeed;
+        PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
+
+        // Set health values from enemy config
+        Health.maxHp[eid] = enemyConfig.hp;
+        Health.currentHp[eid] = enemyConfig.hp;
+
+        console.log(`Spawned preset enemy ${eid} (${enemyId}) at (${Position.x[eid]}, ${Position.y[eid]}) with ${enemyConfig.hp} HP and speed ${enemyConfig.speed * baseSpeed}`);
+    }
+
+    /**
      * Create draggable tower icon in the first square
      * @returns Container with tower icon, positioned relative to panel container
      */
@@ -956,7 +1167,7 @@ export class SandboxScene extends Scene {
                     
                     if (stats) {
                         // Create tower at drop position
-                        this.createTower(pointer.x, pointer.y, 'ball', {
+                        this.createTower(pointer.x, pointer.y, 'basic', {
                             damage: stats.damage,
                             fireInterval: stats.fireInterval,
                             projectileSpeed: stats.projectileSpeed,
