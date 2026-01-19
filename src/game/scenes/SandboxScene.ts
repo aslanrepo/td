@@ -2,10 +2,9 @@ import { addComponent, defineQuery } from 'bitecs';
 import { Scene } from 'phaser';
 
 import { GameWorld } from '../ecs';
-import { Position, Renderable, Velocity, PathProgress, Enemy, Tower, Range, Target, Firing, NO_TARGET, Health } from '../ecs';
-import { WAYPOINTS } from '../ecs/systems/PathMovementSystem';
+import { Position, Renderable, Velocity, PathProgress, PathIndex, Enemy, Tower, Range, Target, Firing, NO_TARGET, Health } from '../ecs';
 import { EventBus } from '../EventBus';
-import { entityVisualConfig, TowerType, EnemyType } from '../config/entityConfig';
+import { entityVisualConfig, TowerType } from '../config/entityConfig';
 import { enemiesData, getEnemyById } from '../config/enemies';
 import { getEnemyVisualById } from '../config/enemies-visual';
 
@@ -22,12 +21,18 @@ export class SandboxScene extends Scene {
     private sandboxPanel!: Phaser.GameObjects.Container;
     private towerIcon: Phaser.GameObjects.Container | null = null;
     private isDraggingTower = false;
-    
+
     // Tower deletion tracking
     private pointerDownTime: number = 0;
     private pointerDownPosition: { x: number; y: number } | null = null;
     private holdTimer: Phaser.Time.TimerEvent | null = null;
     private towerQuery = defineQuery([Tower, Position, Renderable]);
+
+    // Auto-spawn settings for performance testing
+    private autoSpawnTimer: Phaser.Time.TimerEvent | null = null;
+    private autoSpawnEnabled: boolean = false; // Enable auto-spawn by default for testing
+    private autoSpawnCount: number = 150; // Number of enemies to spawn per second
+    private autoSpawnEnemyType: string = 'blue'; // Enemy type to auto-spawn
 
     constructor() {
         super({ key: 'SandboxScene' });
@@ -55,11 +60,17 @@ export class SandboxScene extends Scene {
         // Clean up created points
         this.createdPoints.forEach(point => point.destroy());
         this.createdPoints = [];
-        
+
         // Clean up hold timer if active
         if (this.holdTimer) {
             this.holdTimer.destroy();
             this.holdTimer = null;
+        }
+
+        // Clean up auto-spawn timer if active
+        if (this.autoSpawnTimer) {
+            this.autoSpawnTimer.destroy();
+            this.autoSpawnTimer = null;
         }
     }
 
@@ -82,8 +93,7 @@ export class SandboxScene extends Scene {
         bg.fillStyle(0x228B22); // Зеленый
         bg.fillRect(0, 0, this.scale.width, this.scale.height);
 
-        // Draw waypoint path for debugging
-        this.drawWaypointPath();
+        // Path visualization is now handled by PathMovementSystem
 
         // Create sandbox HUD panel
         this.createSandboxPanel();
@@ -102,6 +112,9 @@ export class SandboxScene extends Scene {
 
         // Emit the current scene ready event
         EventBus.emit('current-scene-ready', this);
+
+        // Start auto-spawn timer for performance testing
+        this.startAutoSpawn();
     }
 
     /**
@@ -208,50 +221,71 @@ export class SandboxScene extends Scene {
 
     /**
      * Spawn enemy entity with ECS components
-     * @param type - Enemy type string (e.g., 'basic')
      * @param options - Enemy configuration options
-     * @param options.hp - Health points (default: 100)
-     * @param options.speed - Movement speed in pixels per second (default: 100)
+     * @param options.hp - Health points
+     * @param options.speed - Movement speed in pixels per second
+     * @param options.renderType - Render type (0 for enemy)
+     * @param options.color - Color value
+     * @param options.size - Size in pixels
      */
-    private spawnEnemy(type: EnemyType = 'basic', options: { hp?: number; speed?: number } = {}) {
+    private spawnEnemy(options: { 
+        hp: number; 
+        speed: number; 
+        renderType: number; 
+        color: number; 
+        size: number;
+    }) {
         const eid = this.ecsWorld.createEntity();
-
-        // Get visual properties from config
-        const enemyConfig = entityVisualConfig.enemies[type];
-        if (!enemyConfig) {
-            console.error(`Unknown enemy type: ${type}`);
-            return;
-        }
-
-        // Extract options with defaults
-        const hp = options.hp ?? 100;
-        const speed = options.speed ?? 100;
 
         // Add components to entity
         addComponent(this.ecsWorld.world, Position, eid);
         addComponent(this.ecsWorld.world, Renderable, eid);
         addComponent(this.ecsWorld.world, Velocity, eid);
         addComponent(this.ecsWorld.world, PathProgress, eid);
+        addComponent(this.ecsWorld.world, PathIndex, eid);
         addComponent(this.ecsWorld.world, Enemy, eid);
         addComponent(this.ecsWorld.world, Health, eid);
 
-        // Set component values
-        Position.x[eid] = WAYPOINTS[0].x;  // Start at first waypoint
-        Position.y[eid] = WAYPOINTS[0].y;
-        
-        // Set visual properties from config
-        Renderable.type[eid] = enemyConfig.renderType;
-        Renderable.color[eid] = enemyConfig.color;
-        Renderable.size[eid] = enemyConfig.size;
-        
-        Velocity.speed[eid] = speed;
-        PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
-        
-        // Set health values
-        Health.maxHp[eid] = hp;
-        Health.currentHp[eid] = hp;
+        // Get paths array from registry and select random path
+        const paths = this.registry.get('enemyPaths') as Phaser.Curves.Path[];
+        let selectedPath: Phaser.Curves.Path | null = null;
+        let pathIndex = 0;
 
-        console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]}) with type ${type}, ${hp} HP and speed ${speed}`);
+        if (paths && paths.length > 0) {
+          // Select random path index (0, 1, or 2)
+          pathIndex = Math.floor(Math.random() * paths.length);
+          selectedPath = paths[pathIndex];
+        } else {
+          // Fallback to single path for backward compatibility
+          selectedPath = this.registry.get('enemyPath') as Phaser.Curves.Path;
+          pathIndex = 0;
+        }
+
+        // Set starting position based on selected path
+        if (selectedPath) {
+          const startPoint = selectedPath.getStartPoint();
+          Position.x[eid] = startPoint.x;
+          Position.y[eid] = startPoint.y;
+        } else {
+          // Fallback if path not available
+          Position.x[eid] = 0;
+          Position.y[eid] = 401;
+        }
+
+        // Set visual properties
+        Renderable.type[eid] = options.renderType;
+        Renderable.color[eid] = options.color;
+        Renderable.size[eid] = options.size;
+
+        Velocity.speed[eid] = options.speed;
+        PathProgress.progress[eid] = 0; // Start at beginning of path
+        PathIndex.index[eid] = pathIndex; // Store path index for this enemy
+
+        // Set health values
+        Health.maxHp[eid] = options.hp;
+        Health.currentHp[eid] = options.hp;
+
+        console.log(`Spawned enemy ${eid} at (${Position.x[eid]}, ${Position.y[eid]}) with ${options.hp} HP and speed ${options.speed}`);
     }
 
     /**
@@ -295,16 +329,16 @@ export class SandboxScene extends Scene {
         Tower.type[eid] = 0; // Keep numeric type for backward compatibility with existing systems
         Tower.damage[eid] = damage;
         Tower.projectileSpeed[eid] = projectileSpeed;
-        
+
         // Set range
         Range.value[eid] = range;
-        
+
         Target.eid[eid] = NO_TARGET; // No target initially
-        
+
         // Set firing properties
         Firing.fireInterval[eid] = fireInterval;
         Firing.lastShotTime[eid] = 0; // Can fire immediately
-        
+
         // Set visual properties from config
         Renderable.type[eid] = towerConfig.renderType;
         Renderable.color[eid] = towerConfig.color;
@@ -313,39 +347,6 @@ export class SandboxScene extends Scene {
         console.log(`Created tower ${eid} at (${x}, ${y}) with type ${type}, damage ${damage}, fireInterval ${fireInterval}ms, projectileSpeed ${projectileSpeed}, range ${range}`);
     }
 
-    /**
-     * Draw waypoint path for debugging
-     */
-    private drawWaypointPath(): void {
-        const pathGraphics = this.add.graphics();
-
-        // Set line style for the path
-        pathGraphics.lineStyle(4, 0x666666); // Gray line, 2px width
-
-        // Draw lines between waypoints
-        for (let i = 0; i < WAYPOINTS.length - 1; i++) {
-            const start = WAYPOINTS[i];
-            const end = WAYPOINTS[i + 1];
-            pathGraphics.lineBetween(
-                start.x,
-                start.y,
-                end.x,
-                end.y
-            );
-        }
-
-        // Draw waypoint markers
-        pathGraphics.fillStyle(0x888888);
-        WAYPOINTS.forEach((waypoint, index) => {
-            pathGraphics.fillCircle(waypoint.x, waypoint.y, 3);
-
-            // Add waypoint labels
-            this.add.text(waypoint.x, waypoint.y, `${index}`, {
-                fontSize: '30px',
-                color: '#ffffff'
-            });
-        });
-    }
 
     /**
      * Handle pointer down event - start tracking hold time
@@ -423,14 +424,14 @@ export class SandboxScene extends Scene {
         const panelY = this.sandboxPanel.y;
         const panelWidth = 400; // Panel width is fixed (defined in createSandboxPanel)
         const panelHeight = this.scale.height; // Panel height matches scene height
-        
+
         // Check if pointer is within panel bounds
         // Since all UI elements (buttons, inputs, etc.) are children of the panel container,
         // checking panel bounds covers all UI interactions
-        return pointer.x >= panelX && 
-               pointer.x <= panelX + panelWidth &&
-               pointer.y >= panelY && 
-               pointer.y <= panelY + panelHeight;
+        return pointer.x >= panelX &&
+            pointer.x <= panelX + panelWidth &&
+            pointer.y >= panelY &&
+            pointer.y <= panelY + panelHeight;
     }
 
     /**
@@ -447,14 +448,14 @@ export class SandboxScene extends Scene {
         for (const towerEid of towers) {
             const towerX = Position.x[towerEid];
             const towerY = Position.y[towerEid];
-            
+
             // Get tower size from Renderable component (set from config)
             const towerSize = Renderable.size[towerEid];
             const clickRadius = towerSize / 2; // Half of tower size for click detection
-            
+
             // Calculate distance from click to tower center
             const distance = Math.hypot(x - towerX, y - towerY);
-            
+
             if (distance <= clickRadius) {
                 // Found tower at this position, delete it
                 console.log(`Deleting tower ${towerEid} at (${towerX}, ${towerY})`);
@@ -559,10 +560,10 @@ export class SandboxScene extends Scene {
         const gridStartY = 110; // Start after title, separator, label, and spacing
         const availableWidth = panelWidth - (padding * 2); // Available width minus left/right padding
         const cellSize = availableWidth / 4; // Square size (smaller to fit with padding)
-        
+
         // Draw 8 squares (4 columns x 2 rows) - fixed size squares, not stretched
         gridGraphics.lineStyle(2, 0x666666); // Grid border color
-        
+
         for (let row = 0; row < 2; row++) {
             for (let col = 0; col < 4; col++) {
                 const x = padding + col * cellSize; // Start with left padding
@@ -591,13 +592,13 @@ export class SandboxScene extends Scene {
         // Create input fields for tower stats using DOMElement
         const towerStatsInputs: { label: Phaser.GameObjects.Text; input: Phaser.GameObjects.DOMElement }[] = [];
         const statsLabels = ['Damage', 'Fire Interval (ms)', 'Projectile Speed', 'Range'];
-        const defaultValues = ['10', '1000', '1500', '100'];
+        const defaultValues = ['10', '1000', '1500', '150'];
 
         statsLabels.forEach((label, index) => {
             // Calculate positions: labels are in container coordinates, inputs are in scene coordinates
             const labelY = inputStartY + (index * (pairHeight + gapBetweenPairs));
             const inputY = labelY + labelHeight + gapBetweenLabelAndInput;
-            
+
             // Create label (in container coordinates, will be transformed by container position)
             const labelText = this.add.text(padding, labelY, label + ':', {
                 fontSize: '14px',
@@ -608,7 +609,7 @@ export class SandboxScene extends Scene {
             // Create DOM input element using Phaser DOMElement (in scene coordinates)
             const inputStyle = `width: ${inputWidth}px; height: ${inputHeight}px; background-color: #1a1a1a; color: #ffffff; border: 1px solid #666666; border-radius: 3px; padding: 5px; font-size: 14px; font-family: Arial, sans-serif;`;
             const inputHTML = `<input type="number" value="${defaultValues[index]}" style="${inputStyle}" />`;
-            
+
             // Position input relative to panel (panelX + padding for x, panelY + inputY for y)
             const inputDOMElement = this.add.dom(panelX + padding, panelY + inputY).createFromHTML(inputHTML);
             inputDOMElement.setOrigin(0, 0);
@@ -648,7 +649,7 @@ export class SandboxScene extends Scene {
         enemyStatsLabels.forEach((label, index) => {
             const labelY = enemyInputStartY + (index * (pairHeight + gapBetweenPairs));
             const inputY = labelY + labelHeight + gapBetweenLabelAndInput;
-            
+
             // Create label
             const labelText = this.add.text(padding, labelY, label + ':', {
                 fontSize: '14px',
@@ -659,7 +660,7 @@ export class SandboxScene extends Scene {
             // Create DOM input element
             const inputStyle = `width: ${inputWidth}px; height: ${inputHeight}px; background-color: #1a1a1a; color: #ffffff; border: 1px solid #666666; border-radius: 3px; padding: 5px; font-size: 14px; font-family: Arial, sans-serif;`;
             const inputHTML = `<input type="number" value="${enemyDefaultValues[index]}" style="${inputStyle}" />`;
-            
+
             const inputDOMElement = this.add.dom(panelX + padding, panelY + inputY).createFromHTML(inputHTML);
             inputDOMElement.setOrigin(0, 0);
             inputDOMElement.setDepth(1001);
@@ -690,11 +691,11 @@ export class SandboxScene extends Scene {
 
         // Add all elements to container
         panelContainer.add([
-            panelBg, 
-            titleText, 
-            separatorLine, 
-            towersLabel, 
-            gridGraphics, 
+            panelBg,
+            titleText,
+            separatorLine,
+            towersLabel,
+            gridGraphics,
             ...towerStatsInputs.map(item => item.label),
             enemySeparatorLine,
             enemiesLabel,
@@ -706,7 +707,7 @@ export class SandboxScene extends Scene {
 
         // Set depth to ensure panel is on top
         panelContainer.setDepth(1000);
-        
+
         // Sort container children by depth so elements with higher depth render on top
         panelContainer.sort('depth');
 
@@ -718,9 +719,9 @@ export class SandboxScene extends Scene {
      * @returns Object with enemy stats values
      */
     private getEnemyStatsFromInputs(): { hp: number; speed: number } | null {
-        const enemyStatsInputs = this.sandboxPanel.getData('enemyStatsInputs') as { 
-            label: Phaser.GameObjects.Text; 
-            input: Phaser.GameObjects.DOMElement 
+        const enemyStatsInputs = this.sandboxPanel.getData('enemyStatsInputs') as {
+            label: Phaser.GameObjects.Text;
+            input: Phaser.GameObjects.DOMElement
         }[] | undefined;
 
         if (!enemyStatsInputs) {
@@ -736,13 +737,13 @@ export class SandboxScene extends Scene {
         // Process all inputs
         enemyStatsInputs.forEach((item, index) => {
             const node = item.input.node;
-            const inputElement = node?.tagName === 'INPUT' 
-                ? node as HTMLInputElement 
+            const inputElement = node?.tagName === 'INPUT'
+                ? node as HTMLInputElement
                 : node?.querySelector('input[type="number"]') as HTMLInputElement;
-            
+
             const rawValue = inputElement?.value || '';
             const parsedValue = parseFloat(rawValue) || defaults[index];
-            
+
             rawValues.push(rawValue);
             parsedValues.push(parsedValue);
         });
@@ -761,9 +762,9 @@ export class SandboxScene extends Scene {
      * @returns Object with tower stats values
      */
     private getTowerStatsFromInputs(): { damage: number; fireInterval: number; projectileSpeed: number; range: number } | null {
-        const towerStatsInputs = this.sandboxPanel.getData('towerStatsInputs') as { 
-            label: Phaser.GameObjects.Text; 
-            input: Phaser.GameObjects.DOMElement 
+        const towerStatsInputs = this.sandboxPanel.getData('towerStatsInputs') as {
+            label: Phaser.GameObjects.Text;
+            input: Phaser.GameObjects.DOMElement
         }[] | undefined;
 
         if (!towerStatsInputs) {
@@ -779,13 +780,13 @@ export class SandboxScene extends Scene {
         // Process all inputs
         towerStatsInputs.forEach((item, index) => {
             const node = item.input.node;
-            const inputElement = node?.tagName === 'INPUT' 
-                ? node as HTMLInputElement 
+            const inputElement = node?.tagName === 'INPUT'
+                ? node as HTMLInputElement
                 : node?.querySelector('input[type="number"]') as HTMLInputElement;
-            
+
             const rawValue = inputElement?.value || '';
             const parsedValue = parseFloat(rawValue) || defaults[index];
-            
+
             rawValues.push(rawValue);
             parsedValues.push(parsedValue);
         });
@@ -857,10 +858,17 @@ export class SandboxScene extends Scene {
         buttonContainer.on('pointerdown', () => {
             const stats = this.getEnemyStatsFromInputs();
             if (stats) {
-                this.spawnEnemy('basic', {
-                    hp: stats.hp,
-                    speed: stats.speed
-                });
+                // Get visual properties from config for 'red' enemy type
+                const visualConfig = getEnemyVisualById('red');
+                if (visualConfig) {
+                    this.spawnEnemy({
+                        hp: stats.hp,
+                        speed: stats.speed,
+                        renderType: visualConfig.renderType,
+                        color: visualConfig.color,
+                        size: visualConfig.size
+                    });
+                }
             }
         });
 
@@ -1005,7 +1013,32 @@ export class SandboxScene extends Scene {
 
             const selectedEnemyId = selectElement?.value;
             if (selectedEnemyId) {
-                this.spawnPresetEnemy(selectedEnemyId);
+                // Get enemy configuration from config files
+                const enemyConfig = getEnemyById(selectedEnemyId);
+                const visualConfig = getEnemyVisualById(selectedEnemyId);
+                
+                if (!enemyConfig) {
+                    console.error(`Enemy config not found for ID: ${selectedEnemyId}`);
+                    return;
+                }
+                
+                if (!visualConfig) {
+                    console.error(`Enemy visual config not found for ID: ${selectedEnemyId}`);
+                    return;
+                }
+                
+                // Convert speed from config (relative) to pixels per second
+                const baseSpeed = 100; // Base speed in pixels per second
+                const speed = enemyConfig.speed * baseSpeed;
+                
+                // Spawn enemy with config data
+                this.spawnEnemy({
+                    hp: enemyConfig.hp,
+                    speed: speed,
+                    renderType: visualConfig.renderType,
+                    color: visualConfig.color,
+                    size: visualConfig.size
+                });
             } else {
                 console.warn('No enemy selected');
             }
@@ -1061,52 +1094,6 @@ export class SandboxScene extends Scene {
      * Spawn enemy with preset configuration from config files
      * @param enemyId - Enemy ID from enemies.json (e.g., 'red', 'blue', 'moab')
      */
-    private spawnPresetEnemy(enemyId: string): void {
-        // Get enemy configuration
-        const enemyConfig = getEnemyById(enemyId);
-        if (!enemyConfig) {
-            console.error(`Enemy config not found for ID: ${enemyId}`);
-            return;
-        }
-
-        // Get visual configuration
-        const visualConfig = getEnemyVisualById(enemyId);
-        if (!visualConfig) {
-            console.error(`Enemy visual config not found for ID: ${enemyId}`);
-            return;
-        }
-
-        const eid = this.ecsWorld.createEntity();
-
-        // Add components to entity
-        addComponent(this.ecsWorld.world, Position, eid);
-        addComponent(this.ecsWorld.world, Renderable, eid);
-        addComponent(this.ecsWorld.world, Velocity, eid);
-        addComponent(this.ecsWorld.world, PathProgress, eid);
-        addComponent(this.ecsWorld.world, Enemy, eid);
-        addComponent(this.ecsWorld.world, Health, eid);
-
-        // Set component values
-        Position.x[eid] = WAYPOINTS[0].x;  // Start at first waypoint
-        Position.y[eid] = WAYPOINTS[0].y;
-
-        // Set visual properties from visual config
-        Renderable.type[eid] = visualConfig.renderType;
-        Renderable.color[eid] = visualConfig.color;
-        Renderable.size[eid] = visualConfig.size;
-
-        // Set speed from enemy config (convert to pixels per second if needed)
-        // Speed in config is relative, so we multiply by a base speed
-        const baseSpeed = 100; // Base speed in pixels per second
-        Velocity.speed[eid] = enemyConfig.speed * baseSpeed;
-        PathProgress.currentWaypoint[eid] = 0; // Start at first waypoint
-
-        // Set health values from enemy config
-        Health.maxHp[eid] = enemyConfig.hp;
-        Health.currentHp[eid] = enemyConfig.hp;
-
-        console.log(`Spawned preset enemy ${eid} (${enemyId}) at (${Position.x[eid]}, ${Position.y[eid]}) with ${enemyConfig.hp} HP and speed ${enemyConfig.speed * baseSpeed}`);
-    }
 
     /**
      * Create draggable tower icon in the first square
@@ -1115,7 +1102,7 @@ export class SandboxScene extends Scene {
     private createTowerIcon(squareX: number, squareY: number, cellSize: number): Phaser.GameObjects.Container | null {
         // Create container for tower icon (relative to panel container coordinates)
         const iconContainer = this.add.container(squareX + cellSize / 2, squareY + cellSize / 2);
-        
+
         // Create tower visual (small rectangle representing tower)
         const towerGraphics = this.add.graphics();
         const iconSize = cellSize * 0.6; // 60% of cell size
@@ -1125,7 +1112,7 @@ export class SandboxScene extends Scene {
         towerGraphics.strokeRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize);
 
         iconContainer.add(towerGraphics);
-        
+
         // Make container interactive and draggable
         iconContainer.setInteractive(new Phaser.Geom.Rectangle(-iconSize / 2, -iconSize / 2, iconSize, iconSize), Phaser.Geom.Rectangle.Contains);
         iconContainer.setDepth(2000); // High depth to be above panel elements
@@ -1133,7 +1120,7 @@ export class SandboxScene extends Scene {
         // Store original position (relative to panel container)
         const originalX = squareX + cellSize / 2;
         const originalY = squareY + cellSize / 2;
-        
+
         // Get panel position for coordinate conversion
         const panelWidth = 400;
         const panelX = this.scale.width - panelWidth;
@@ -1156,15 +1143,15 @@ export class SandboxScene extends Scene {
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             if (this.isDraggingTower) {
                 this.isDraggingTower = false;
-                
+
                 // Check if dropped outside the panel (on the game scene)
                 const panelWidth = 400;
                 const isOutsidePanel = pointer.x < (this.scale.width - panelWidth);
-                
+
                 if (isOutsidePanel) {
                     // Get tower stats from inputs
                     const stats = this.getTowerStatsFromInputs();
-                    
+
                     if (stats) {
                         // Create tower at drop position
                         this.createTower(pointer.x, pointer.y, 'basic', {
@@ -1175,7 +1162,7 @@ export class SandboxScene extends Scene {
                         });
                     }
                 }
-                
+
                 // Return icon to original position
                 if (this.towerIcon) {
                     this.towerIcon.setPosition(originalX, originalY);
@@ -1185,6 +1172,58 @@ export class SandboxScene extends Scene {
 
         this.towerIcon = iconContainer;
         return iconContainer;
+    }
+
+    /**
+     * Start auto-spawn timer for performance testing
+     * Spawns enemies at regular intervals
+     */
+    private startAutoSpawn(): void {
+        if (this.autoSpawnEnabled) {
+            // Calculate interval in milliseconds (1000ms / count per second)
+            const interval = 1000 / this.autoSpawnCount;
+            
+            this.autoSpawnTimer = this.time.addEvent({
+                delay: interval,
+                callback: () => {
+                    // Get enemy configuration from config files
+                    const enemyConfig = getEnemyById(this.autoSpawnEnemyType);
+                    const visualConfig = getEnemyVisualById(this.autoSpawnEnemyType);
+                    
+                    if (!enemyConfig || !visualConfig) {
+                        console.error(`Enemy config not found for ID: ${this.autoSpawnEnemyType}`);
+                        return;
+                    }
+                    
+                    // Convert speed from config (relative) to pixels per second
+                    const baseSpeed = 100; // Base speed in pixels per second
+                    const speed = enemyConfig.speed * baseSpeed;
+                    
+                    // Spawn enemy with config data
+                    this.spawnEnemy({
+                        hp: enemyConfig.hp,
+                        speed: speed,
+                        renderType: visualConfig.renderType,
+                        color: visualConfig.color,
+                        size: visualConfig.size
+                    });
+                },
+                loop: true
+            });
+
+            console.log(`Auto-spawn started: ${this.autoSpawnCount} ${this.autoSpawnEnemyType} enemy/enemies per second`);
+        }
+    }
+
+    /**
+     * Stop auto-spawn timer
+     */
+    private stopAutoSpawn(): void {
+        if (this.autoSpawnTimer) {
+            this.autoSpawnTimer.destroy();
+            this.autoSpawnTimer = null;
+            console.log('Auto-spawn stopped');
+        }
     }
 
     /**

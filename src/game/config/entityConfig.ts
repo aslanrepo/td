@@ -19,16 +19,6 @@ export const entityVisualConfig = {
     // cannon: { size: 35, color: 0xff8800, renderType: 1 },
     // ice: { size: 30, color: 0x0088ff, renderType: 1 },
   },
-  enemies: {
-    basic: { 
-      size: 20, 
-      color: 0xff0000, // Red
-      renderType: 0 // Enemy type for rendering
-    },
-    // Future enemy types can be added here
-    // fast: { size: 20, color: 0xff00ff, renderType: 0 },
-    // tank: { size: 35, color: 0x0000ff, renderType: 0 },
-  },
   projectiles: {
     basic: { 
       size: 10, 
@@ -41,6 +31,5 @@ export const entityVisualConfig = {
 
 // Type definitions for better TypeScript support
 export type TowerType = keyof typeof entityVisualConfig.towers;
-export type EnemyType = keyof typeof entityVisualConfig.enemies;
 export type ProjectileType = keyof typeof entityVisualConfig.projectiles;
 

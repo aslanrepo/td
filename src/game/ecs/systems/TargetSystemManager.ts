@@ -39,7 +39,7 @@ class TargetSystemManager {
 
     // Sort enemies by progress (descending - closest to exit first)
     const sortedEnemies = enemies.slice().sort((a, b) => 
-      PathProgress.currentWaypoint[b] - PathProgress.currentWaypoint[a]
+      PathProgress.progress[b] - PathProgress.progress[a]
     );
 
     // Process each tower
