@@ -9,7 +9,9 @@ export class MenuScene extends Scene
         super({ key: 'MenuScene' });
     }
 
-    init() {
+    init()
+    {
+
     }
 
     create()
