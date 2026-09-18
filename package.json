@@ -14,7 +14,7 @@
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx}\"",
-    "test": "jest",
+    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\"",
     "test:e2e": "cypress run"
   },
   "dependencies": {

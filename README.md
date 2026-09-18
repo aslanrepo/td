@@ -1,116 +1,28 @@
-# Tower Defense Game MVP
+# td
 
-A minimal Tower Defense game prototype for Telegram WebApp, built with Phaser.js and following ECS-like architecture.
+A tower-defense prototype: Phaser 3 draws and handles input, [bitecs](https://github.com/NateTheGreatt/bitECS) holds the game state, a small React layer wraps the canvas, and the whole thing runs as a Telegram Mini App. The point of the project was to try a data-oriented ECS next to a scene-graph engine and see where the seam ends up.
 
-## Features
+## How it is put together
 
-- **Telegram WebApp Integration**: Full support for Telegram themes, haptic feedback, and cloud storage
-- **Vector Graphics**: WebGL-based rendering with procedural graphics
-- **Landscape Orientation**: Optimized for mobile devices with landscape lock
-- **Modular Architecture**: ECS-like structure with Phaser components
-- **Dynamic Theming**: Automatic adaptation to Telegram theme changes
+- `src/game/ecs/components/` — typed-array components (`Position`, `Velocity`, `Health`, …) and marker components such as `Enemy` and `Dead`.
+- `src/game/ecs/systems/` — one system per mechanic. `World.ts` runs them in a fixed order: path movement → targeting → firing → projectile movement and lifetime → collision → damage → death → render. A new mechanic is one more system; the others do not change.
+- `src/game/ecs/systems/pathGeometry.ts` — the lane offsets as a pure function with no Phaser dependency, covered by `pathGeometry.test.ts`. Enemies walk one of three lanes built from a single list of waypoints.
+- `src/game/ecs/systems/RenderSystemManager.ts` — the only system that touches Phaser game objects. It creates and destroys sprites from bitecs enter/exit queries, so gameplay systems never hold a sprite reference: removing an entity is enough.
+- `src/game/scenes/` — `MenuScene` and `SandboxScene` (spawn enemies with chosen parameters, place towers, hold to remove them, see their range).
+- `src/game/config/` — enemy parameters and visuals as JSON.
+- `src/App.tsx`, `src/PhaserGame.tsx`, `src/game/EventBus.ts` — the React shell around the Phaser canvas and the event bus between them.
 
-## Tech Stack
-
-- **Frontend**: Phaser.js v3.85+ (WebGL rendering)
-- **Language**: JavaScript/TypeScript with ESM modules
-- **Build Tool**: Vite with HTTPS support
-- **Telegram**: @telegram-apps/sdk
-- **Hosting**: Vercel/Netlify ready
-
-## Project Structure
-
-```
-src/
-├── main.js                 # Game initialization and configuration
-├── scenes/
-│   ├── MenuScene.js        # Start screen with "Start Game" button
-│   ├── GameScene.js        # Main gameplay (placeholder)
-│   └── RewardScene.js      # Rewards and achievements (placeholder)
-└── services/
-    └── TelegramService.js  # Telegram WebApp integration
-```
-
-## Development
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Installation
+## Scripts
 
 ```bash
 npm install
-```
-
-### Development Server
-
-```bash
-npm run dev
-```
-
-This starts the development server with HTTPS (required for Telegram WebApp testing).
-
-### Build for Production
-
-```bash
+npm run dev          # HTTPS dev server (Telegram Mini Apps require HTTPS)
 npm run build
+npm test             # node --test over the pure modules
+npm run type-check
+npm run lint
 ```
 
-### Testing
+## How it was built
 
-```bash
-# Unit tests
-npm test
-
-# E2E tests
-npm run test:e2e
-```
-
-## Architecture
-
-### ECS-like Structure
-
-The game follows an Entity-Component-System pattern using Phaser:
-
-- **Entities**: Game objects (sprites, graphics)
-- **Components**: Phaser components for behavior
-- **Systems**: Scene-based logic and rendering
-
-### Telegram Integration
-
-The `TelegramService` handles:
-
-- Theme parameter adaptation
-- Haptic feedback
-- Cloud storage
-- Main button management
-- Orientation locking
-
-### Scenes
-
-- **MenuScene**: Start screen with animated "Start Game" button
-- **GameScene**: Main gameplay (to be implemented)
-- **RewardScene**: Rewards system (to be implemented)
-
-## Configuration
-
-The game is configured for:
-
-- **WebGL rendering** for optimal performance
-- **Landscape orientation lock** for mobile compatibility
-- **Dynamic resolution** scaling for crisp text
-- **Telegram theme integration** for seamless UX
-
-## Next Steps
-
-1. Implement tower defense mechanics in GameScene
-2. Add blockchain integration (TON wallet)
-3. Create reward system
-4. Add multiplayer support
-5. Deploy to Vercel/Netlify
-
-## License
-
-MIT License - see LICENSE file for details.
+Designed and reviewed by me; most of the code was typed by coding agents (Claude Code and similar). The decisions are mine: the ECS/Phaser split, the system order, the lanes derived from one offset function. The agents did the typing, I read and ran the result.

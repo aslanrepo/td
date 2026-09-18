@@ -73,4 +73,11 @@ export default [
       '*.d.ts',
     ],
   },
+  // Test files: node:test's describe/it return promises that are meant to be left un-awaited
+  {
+    files: ['**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
+    },
+  },
 ];
